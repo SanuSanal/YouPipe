@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432" width="432" height="432">
+  <!-- Android 13 themed icon: the screen filled, the pipe cut out, its bore filled back in -->
+  <defs>
+    <mask id="cut">
+      <rect width="192" height="192" fill="#FFFFFF"/>
+      <g>
+        <path d="M74 77 H119 A9.5 19 0 0 1 119 115 H74 A9.5 19 0 0 1 74 77 Z" fill="#000000"/>
+        <ellipse cx="119" cy="96" rx="9.5" ry="19" fill="#000000"/>
+        <ellipse cx="119" cy="96" rx="6" ry="13.6" fill="#FFFFFF"/>
+      </g>
+    </mask>
+  </defs>
+  <g transform="translate(91 128.5) scale(1.5625) translate(-16 -40)">
+    <rect x="16" y="40" width="160" height="112" rx="26" fill="#FFFFFF" mask="url(#cut)"/>
+  </g>
+</svg>

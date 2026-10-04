@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YouPipe: ad-free YouTube for Android</title>
+  <meta name="description" content="A free Android app for YouTube with no ads, background play, picture-in-picture, downloads and SponsorBlock. No account needed.">
+  <meta name="theme-color" content="#FF0000">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="YouPipe">
+  <meta property="og:description" content="All of YouTube. None of the ads. A free Android app with background play, picture-in-picture, downloads and SponsorBlock.">
+  <meta property="og:image" content="https://sanusanal.github.io/YouPipe/og.png">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="og.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --porcelain: #F3F4F6;
+      --paper: #FFFFFF;
+      --ink: #0E0F12;
+      --steel: #5A606C;
+      --line: #DADDE2;
+      --signal: #FF0000;
+      --bore: #9E0000;
+      --night: #0F0F0F;
+      --display: "Unbounded", system-ui, sans-serif;
+      --body: "Instrument Sans", system-ui, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+      --wrap: 76rem;
+      --gutter: clamp(1rem, 4vw, 3rem);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --porcelain: #0B0C0E;
+        --paper: #141519;
+        --ink: #F2F3F5;
+        --steel: #9CA2AD;
+        --line: #26282E;
+        color-scheme: dark;
+      }
+    }
+
+    /* Scale the whole page up on large and 4K displays, so it keeps its proportions instead of floating small. */
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    @media (min-width: 1800px) { html { font-size: calc(16px + (100vw - 1800px) * 0.004); } }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--porcelain);
+      color: var(--ink);
+      font: 400 1.0625rem/1.6 var(--body);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--signal); outline-offset: 3px; border-radius: 6px; }
+    .wrap { width: min(100% - 2 * var(--gutter), var(--wrap)); margin-inline: auto; }
+    .mono { font-family: var(--mono); font-size: 0.8125rem; letter-spacing: 0.01em; }
+    h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; margin: 0; }
+    h2 { font-size: clamp(1.75rem, 3.2vw, 2.75rem); }
+    h3 { font-family: var(--body); font-weight: 600; font-size: 1.0625rem; letter-spacing: 0; line-height: 1.3; }
+    p { margin: 0; }
+
+    /* Header */
+    .top { display: flex; align-items: center; justify-content: space-between; padding-block: 1.25rem; }
+    .brand { display: inline-flex; align-items: center; gap: 0.625rem; text-decoration: none; font: 700 1.0625rem var(--display); letter-spacing: -0.01em; }
+    .brand img { width: 2.25rem; height: 2.25rem; }
+    .top nav { display: flex; gap: 1.5rem; align-items: center; }
+    .top nav a { text-decoration: none; font-weight: 500; color: var(--steel); }
+    .top nav a:hover { color: var(--ink); }
+    @media (max-width: 640px) { .top nav .hide-sm { display: none; } }
+
+    /* Buttons: pills, like the pipe */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.625rem;
+      padding: 0.9rem 1.5rem; border-radius: 999px;
+      font: 600 1rem var(--body); text-decoration: none; border: 0; cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+    .btn svg { width: 1.25rem; height: 1.25rem; flex: none; }
+    .btn-primary { background: var(--signal); color: #fff; box-shadow: 0 0.5rem 1.5rem -0.5rem rgb(255 0 0 / 0.55); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0.75rem 2rem -0.5rem rgb(255 0 0 / 0.6); }
+
+    /* Hero */
+    .hero { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: clamp(2rem, 5vw, 5rem); align-items: center; padding-block: clamp(2.5rem, 7vw, 6rem) clamp(3rem, 6vw, 5rem); }
+    .hero h1 { font-size: clamp(2.6rem, 6.4vw, 5.6rem); }
+    .hero h1 .minus { display: block; color: var(--signal); }
+    .lede { margin-top: 1.5rem; max-width: 34rem; font-size: 1.1875rem; color: var(--steel); }
+    .get { margin-top: 2.25rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; }
+    .get-meta { color: var(--steel); }
+    .get-meta a { color: var(--steel); }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .phone-stage { justify-self: center; }
+    }
+
+    /* Phone frame: flat sides, thin even bezels, a punch-hole camera and two side keys.
+       Same proportions as the README frames drawn by tool/screenshots.py. */
+    .device {
+      position: relative; aspect-ratio: 1132 / 2452; padding: 2.3%; border-radius: 10.4% / 4.8%;
+      background: #0E0F12; box-shadow: inset 0 0 0 2px #4A4D54, 0 2.5rem 5rem -1.5rem rgb(14 15 18 / 0.45);
+    }
+    .device::before {
+      content: ""; position: absolute; right: -0.2rem; top: 20%; width: 0.22rem; height: 19%; border-radius: 0 0.2rem 0.2rem 0;
+      background: linear-gradient(180deg, #3A3C42 0 52%, transparent 52% 68%, #3A3C42 68% 100%);
+    }
+    .device::after {
+      content: ""; position: absolute; z-index: 1; left: 50%; top: 3.1%; width: 3.4%; aspect-ratio: 1; border-radius: 50%;
+      transform: translate(-50%, -50%); background: #050506; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
+    }
+    .device > .screen, .device > img { border-radius: 8.9% / 4%; }
+
+    /* Phone mockup: the app's watch page, drawn in CSS with a made-up video */
+    .phone-stage { position: relative; }
+    .phone { width: min(19.5rem, 78vw); transform: rotate(3deg); }
+    .screen {
+      height: 100%; overflow: hidden; color: #F1F1F1; background: var(--night);
+      display: flex; flex-direction: column; font-size: 0.75rem; position: relative;
+    }
+    .screen .bar { display: flex; justify-content: space-between; align-items: center; font: 600 0.6875rem var(--body); padding: 1.05rem 1.25rem 0.5rem; background: #000; }
+    .screen .bar .icons { display: flex; gap: 0.3rem; align-items: center; }
+    .screen .bar svg { height: 0.6875rem; width: auto; fill: #fff; }
+    .video {
+      aspect-ratio: 16 / 9; position: relative; overflow: hidden;
+      background:
+        radial-gradient(ellipse at 70% 120%, #1F3A2E 0%, transparent 60%),
+        radial-gradient(circle at 78% 26%, #FFD9A0 0%, #F7A65A 9%, transparent 24%),
+        linear-gradient(180deg, #F08A5D 0%, #B83B5E 38%, #4B2C5E 68%, #1B1B3A 100%);
+    }
+    /* A ridge line and a cabin roof, so it reads as a video still. */
+    .video::before {
+      content: ""; position: absolute; inset: auto 0 0 0; height: 46%;
+      background: #10141C; clip-path: polygon(0 55%, 18% 30%, 34% 48%, 52% 18%, 70% 44%, 86% 26%, 100% 40%, 100% 100%, 0 100%);
+    }
+    .video::after {
+      content: ""; position: absolute; left: 22%; bottom: 14%; width: 15%; height: 16%;
+      background: #F7C873; clip-path: polygon(50% 0, 100% 45%, 100% 100%, 0 100%, 0 45%);
+      box-shadow: 0 0 1.5rem #F7C873;
+    }
+    .progress { height: 3px; background: rgb(255 255 255 / 0.25); position: relative; }
+    .progress::before { content: ""; position: absolute; inset: 0 64% 0 0; background: var(--signal); }
+    .progress::after { content: ""; position: absolute; left: 36%; top: 50%; width: 9px; height: 9px; margin: -4.5px; border-radius: 50%; background: var(--signal); }
+    .skip { position: absolute; right: 0.6rem; bottom: 0.6rem; z-index: 1; padding: 0.25rem 0.55rem; border-radius: 0.3rem; background: rgb(0 0 0 / 0.7); font-weight: 600; font-size: 0.625rem; }
+    .meta { padding: 0.7rem 0.8rem 0; }
+    .meta b { display: block; font-size: 0.875rem; line-height: 1.25; }
+    .meta .sub { margin-top: 0.3rem; color: #AAA; font-size: 0.625rem; }
+    .chan { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.7rem; font-weight: 600; }
+    .chan .av { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: linear-gradient(135deg, #5EC2A2, #2E7D6B); flex: none; }
+    .chan small { color: #AAA; font-weight: 400; }
+    .chan .subscribe { margin-left: auto; background: #F1F1F1; color: #0F0F0F; border-radius: 999px; padding: 0.3rem 0.7rem; font-size: 0.6875rem; }
+    .actions { display: flex; gap: 0.35rem; margin-top: 0.7rem; overflow: hidden; }
+    .actions span { flex: none; background: #272727; border-radius: 999px; padding: 0.3rem 0.65rem; font-weight: 600; font-size: 0.625rem; display: inline-flex; gap: 0.3rem; align-items: center; }
+    .actions svg { width: 0.75rem; height: 0.75rem; fill: none; stroke: #F1F1F1; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .comments { margin: 0.7rem 0.8rem 0; background: #272727; border-radius: 0.5rem; padding: 0.5rem 0.6rem; font-size: 0.625rem; color: #CCC; }
+    .comments b { color: #F1F1F1; font-size: 0.6875rem; margin-right: 0.3rem; }
+    .next { margin-top: 0.8rem; flex: 1; position: relative; }
+    .next .thumb {
+      aspect-ratio: 16 / 9;
+      background: radial-gradient(circle at 30% 40%, #7FD1F5 0%, #2F7FD0 30%, #142850 70%);
+    }
+    .next .thumb::after { content: "12:04"; position: absolute; right: 0.5rem; top: 0.5rem; padding: 0.05rem 0.3rem; border-radius: 0.25rem; background: rgb(0 0 0 / 0.75); font-weight: 600; font-size: 0.5625rem; }
+    /* The pipe: the logo's cylinder, stretched across the page. Features flow along it into the bore. */
+    .band { background: var(--signal); padding-block: clamp(2.5rem, 6vw, 4.5rem); overflow: hidden; }
+    .pipe { position: relative; height: clamp(4.5rem, 9vw, 7rem); margin-right: clamp(1.5rem, 5vw, 5rem); }
+    .pipe-body {
+      position: absolute; inset: 0; right: calc(var(--rx) * 1);
+      --rx: clamp(1.1rem, 2.2vw, 1.75rem);
+      background: linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 58%, #DCDCDC 100%);
+      overflow: hidden;
+      box-shadow: 0 1.5rem 3rem -1.5rem rgb(80 0 0 / 0.6);
+    }
+    .pipe-end {
+      position: absolute; top: 0; bottom: 0; right: 0; width: calc(var(--rx) * 2);
+      --rx: clamp(1.1rem, 2.2vw, 1.75rem);
+      border-radius: 50%; background: #fff; display: grid; place-items: center;
+      box-shadow: -2px 0 0 rgb(0 0 0 / 0.04);
+    }
+    .pipe-end::after {
+      content: ""; width: 62%; height: 72%; border-radius: 50%;
+      background: linear-gradient(90deg, #7A0000, #C40000);
+    }
+    .flow {
+      position: absolute; inset: 0; display: flex; align-items: center; white-space: nowrap;
+      font: 700 clamp(1.1rem, 2.4vw, 1.9rem) var(--display); letter-spacing: -0.01em; color: var(--night);
+      animation: flow 40s linear infinite;
+      /* Fade the words out as they reach the bore. */
+      -webkit-mask-image: linear-gradient(90deg, #000 0, #000 85%, transparent 100%);
+      mask-image: linear-gradient(90deg, #000 0, #000 85%, transparent 100%);
+    }
+    .flow span { padding-inline: 1.25em; display: inline-flex; align-items: center; gap: 1.25em; }
+    .flow span::after { content: ""; width: 0.45em; height: 0.45em; border-radius: 50%; background: var(--signal); }
+    @keyframes flow { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+    @media (prefers-reduced-motion: reduce) {
+      .flow { animation: none; transform: translateX(-10%); }
+    }
+    .band-caption { margin-top: 1.25rem; color: #fff; font-weight: 500; }
+
+    /* Sections */
+    section.block { padding-block: clamp(3.5rem, 8vw, 7rem); }
+    .block-head { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 3rem; align-items: end; margin-bottom: clamp(2rem, 4vw, 3.5rem); }
+    .block-head p { color: var(--steel); max-width: 32rem; }
+    @media (max-width: 800px) { .block-head { grid-template-columns: 1fr; } }
+
+    .features { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); }
+    .feature { padding: 1.75rem 1.5rem 0 0; }
+    .feature + .feature { padding-left: 1.5rem; border-left: 1px solid var(--line); }
+    .feature svg { width: 1.75rem; height: 1.75rem; stroke: var(--signal); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .feature h3 { margin-top: 1rem; }
+    .feature ul { list-style: none; padding: 0; margin: 0.75rem 0 0; color: var(--steel); }
+    .feature li { padding-block: 0.35rem; border-bottom: 1px dashed var(--line); }
+    .feature li:last-child { border-bottom: 0; }
+    @media (max-width: 1000px) {
+      .features { grid-template-columns: 1fr 1fr; }
+      .feature:nth-child(3) { padding-left: 0; border-left: 0; }
+    }
+    @media (max-width: 560px) {
+      .features { grid-template-columns: 1fr; }
+      .feature, .feature + .feature { padding-left: 0; border-left: 0; }
+    }
+
+    /* Screenshots: real captures from the app, in phone frames on a rail that scrolls sideways */
+    .gallery { background: var(--night); color: #fff; overflow: hidden; }
+    .gallery .block-head p { color: rgb(255 255 255 / 0.62); }
+    .shots {
+      display: flex; gap: clamp(1rem, 2.5vw, 2rem); overflow-x: auto; scroll-snap-type: x mandatory;
+      padding: 1rem max(var(--gutter), calc((100% - var(--wrap)) / 2)) 2.5rem; scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.25) transparent;
+    }
+    .shot { flex: none; width: clamp(12.5rem, 21vw, 16.5rem); margin: 0; scroll-snap-align: center; }
+    .shot:nth-child(even) { margin-top: clamp(0rem, 4vw, 3.5rem); }
+    .shot .device { box-shadow: inset 0 0 0 2px #4A4D54, 0 2rem 4rem -1.5rem rgb(0 0 0 / 0.85); transition: transform 0.25s ease; }
+    .shot:hover .device { transform: translateY(-0.4rem); }
+    .shot img { display: block; width: 100%; height: 100%; object-fit: cover; background: #111; }
+    .shot figcaption { margin-top: 1.1rem; padding-inline: 0.25rem; }
+    .shot figcaption b { display: block; font-weight: 600; }
+    .shot figcaption span { color: rgb(255 255 255 / 0.6); font-size: 0.9375rem; }
+    @media (prefers-reduced-motion: reduce) { .shot .device { transition: none; } }
+
+    /* Install: a real sequence, so it's numbered */
+    .install { background: var(--paper); border-block: 1px solid var(--line); }
+    .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; counter-reset: step; }
+    .steps li { counter-increment: step; padding: 1.75rem; border-radius: 1.5rem; background: var(--porcelain); }
+    .steps li::before {
+      content: counter(step); display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+      background: var(--ink); color: var(--porcelain); font: 700 1rem var(--display); margin-bottom: 1.25rem;
+    }
+    .steps p { margin-top: 0.5rem; color: var(--steel); }
+    @media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
+
+    .abis { margin-top: 2.5rem; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 1.25rem; overflow: hidden; }
+    .abi { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.35rem; text-decoration: none; background: var(--paper); }
+    .abi + .abi { border-left: 1px solid var(--line); }
+    .abi:hover { background: var(--porcelain); }
+    .abi .mono { color: var(--ink); }
+    .abi small { color: var(--steel); font-size: 0.9375rem; }
+    .abi.best .mono::after { content: "Most phones"; margin-left: 0.6rem; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--signal); color: #fff; font: 600 0.6875rem var(--body); vertical-align: 0.1em; }
+    @media (max-width: 800px) { .abis { grid-template-columns: 1fr; } .abi + .abi { border-left: 0; border-top: 1px solid var(--line); } }
+
+    /* Privacy */
+    .privacy { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+    .privacy div { border-top: 3px solid var(--ink); padding-top: 1.25rem; }
+    .privacy p { margin-top: 0.5rem; color: var(--steel); }
+    @media (max-width: 800px) { .privacy { grid-template-columns: 1fr; } }
+
+    /* Questions */
+    .faq { border-top: 1px solid var(--line); }
+    .faq details { border-bottom: 1px solid var(--line); }
+    .faq summary {
+      list-style: none; cursor: pointer; padding: 1.35rem 0; display: flex; justify-content: space-between; gap: 1rem;
+      font-weight: 600; font-size: 1.125rem;
+    }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after { content: "+"; font: 500 1.5rem/1 var(--display); color: var(--signal); transition: transform 0.2s ease; }
+    .faq details[open] summary::after { transform: rotate(45deg); }
+    .faq details p { padding-bottom: 1.5rem; max-width: 46rem; color: var(--steel); }
+
+    /* Support */
+    .support { background: var(--ink); color: var(--porcelain); border-radius: 2rem; padding: clamp(2rem, 5vw, 4rem); display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem; align-items: center; }
+    .support p { margin-top: 1rem; opacity: 0.75; max-width: 30rem; }
+    .donate { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: flex-end; }
+    .donate a { display: inline-flex; align-items: center; justify-content: center; min-height: 3.25rem; padding: 0 1.5rem; border-radius: 999px; font-weight: 600; text-decoration: none; }
+    .donate .bmc { background: #FFDD00; color: #000; }
+    .donate .pp { background: #fff; color: #00457C; }
+    .donate .rv { background: transparent; color: #fff; border: 1px solid rgb(255 255 255 / 0.35); }
+    .donate a:hover { filter: brightness(0.95); }
+    @media (prefers-color-scheme: dark) { .support { background: var(--paper); color: var(--ink); } .donate .rv { color: var(--ink); border-color: var(--line); } }
+    @media (max-width: 800px) { .support { grid-template-columns: 1fr; } .donate { justify-content: flex-start; } }
+
+    footer { padding-block: 3rem 4rem; color: var(--steel); font-size: 0.9375rem; }
+    footer .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--line); }
+    footer nav { display: flex; gap: 1.5rem; }
+    footer p { margin-top: 1.5rem; max-width: 52rem; }
+  </style>
+</head>
+<body>
+  <header class="wrap top">
+    <a class="brand" href="./"><img src="logo.svg" alt="" width="36" height="36">YouPipe</a>
+    <nav>
+      <a class="hide-sm" href="#features">Features</a>
+      <a class="hide-sm" href="#screenshots">Screenshots</a>
+      <a class="hide-sm" href="#install">Install</a>
+      <a href="https://github.com/SanuSanal/YouPipe">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <div>
+        <h1>All of YouTube.<span class="minus">None of the ads.</span></h1>
+        <p class="lede">YouPipe is a free Android app for YouTube. Keep videos playing in the background or in a floating window, download them for later and skip the sponsor segments automatically.</p>
+        <div class="get">
+          <a class="btn btn-primary" id="download" href="https://github.com/SanuSanal/YouPipe/releases/latest">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+            <span id="download-label">Download for Android</span>
+          </a>
+          <span class="get-meta mono" id="download-meta">Free · Android 7 and up · <a href="#install">Other versions</a></span>
+        </div>
+      </div>
+
+      <div class="phone-stage" aria-hidden="true">
+        <div class="phone device">
+          <div class="screen">
+            <div class="bar"><span>2:10</span><span class="icons">
+              <svg viewBox="0 0 16 12"><rect x="0" y="8" width="2.6" height="4" rx=".6"/><rect x="4.4" y="5.5" width="2.6" height="6.5" rx=".6"/><rect x="8.8" y="3" width="2.6" height="9" rx=".6"/><rect x="13.2" y="0" width="2.6" height="12" rx=".6"/></svg>
+              <svg viewBox="0 0 16 12"><path d="M8 12 0 3.5a11.3 11.3 0 0 1 16 0Z"/></svg>
+              <svg viewBox="0 0 24 12"><rect x=".75" y=".75" width="19.5" height="10.5" rx="2.5" fill="none" stroke="#fff" stroke-width="1.5"/><rect x="3" y="3" width="13" height="6" rx="1"/><rect x="21.5" y="4" width="2" height="4" rx="1"/></svg>
+            </span></div>
+            <div class="video"><span class="skip">Skip sponsor ▸</span></div>
+            <div class="progress"></div>
+            <div class="meta">
+              <b>I built a tiny cabin at the edge of the forest</b>
+              <div class="sub">412K views · 3 days ago · ...more</div>
+              <div class="chan"><span class="av"></span>Slow Roads <small>286K</small><span class="subscribe">Subscribe</span></div>
+              <div class="actions">
+                <span><svg viewBox="0 0 24 24"><path d="M7 10v11M15 5.9 14 10h5.8a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 18.4 21H7V10l4-8a3 3 0 0 1 4 3.9Z"/></svg>24K</span>
+                <span><svg viewBox="0 0 24 24"><path d="M17 14V3M9 18.1 10 14H4.2a2 2 0 0 1-2-2.3l1.4-7A2 2 0 0 1 5.6 3H17v11l-4 8a3 3 0 0 1-4-3.9Z"/></svg>310</span>
+                <span><svg viewBox="0 0 24 24"><path d="M14 4l7 7-7 7M21 11H9a6 6 0 0 0-6 6v2"/></svg>Share</span>
+                <span><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Download</span>
+              </div>
+            </div>
+            <div class="comments"><b>Comments 1.2K</b>The drone shot at 4:12 is unreal</div>
+            <div class="next"><div class="thumb"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="band" aria-label="What YouPipe does">
+      <div class="pipe">
+        <div class="pipe-body">
+          <div class="flow" aria-hidden="true">
+            <span>No ads</span><span>Background play</span><span>Picture-in-picture</span><span>Downloads</span><span>SponsorBlock</span><span>Dislike counts</span><span>Shorts</span><span>Subscriptions without an account</span><span>Captions</span><span>Cast to TV</span><span>Sleep timer</span>
+            <span>No ads</span><span>Background play</span><span>Picture-in-picture</span><span>Downloads</span><span>SponsorBlock</span><span>Dislike counts</span><span>Shorts</span><span>Subscriptions without an account</span><span>Captions</span>
+          </div>
+        </div>
+        <div class="pipe-end"></div>
+      </div>
+      <p class="wrap band-caption">Everything on YouTube, piped straight to your phone with nothing in the way.</p>
+    </div>
+
+    <section class="block" id="features">
+      <div class="wrap">
+        <div class="block-head">
+          <h2>Feels like the app you know</h2>
+          <p>The layout follows YouTube on Android, so there's nothing new to learn. What's missing is the ads and the limits.</p>
+        </div>
+        <div class="features">
+          <div class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/></svg>
+            <h3>Watch</h3>
+            <ul>
+              <li>Videos, Shorts, channels and playlists</li>
+              <li>Keeps playing with the screen off</li>
+              <li>Picture-in-picture when you leave the app</li>
+              <li>Floating mini player while you browse</li>
+              <li>Up to 4K, with chapters and captions</li>
+              <li>Comments, replies and descriptions</li>
+            </ul>
+          </div>
+          <div class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4l8 8-8 8M13 4l8 8-8 8"/></svg>
+            <h3>Skip the boring bits</h3>
+            <ul>
+              <li>Skips sponsor segments with SponsorBlock</li>
+              <li>Shows dislike counts again</li>
+              <li>Double-tap to seek, hold for 2× speed</li>
+              <li>Playback speed, loop and sleep timer</li>
+            </ul>
+          </div>
+          <div class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            <h3>Offline &amp; library</h3>
+            <ul>
+              <li>Download videos up to 1080p</li>
+              <li>Subscribe to channels without an account</li>
+              <li>Import subscriptions from Google Takeout or NewPipe</li>
+              <li>History, playlists and Watch later on your phone</li>
+              <li>Optional sign-in to bring your YouTube library</li>
+            </ul>
+          </div>
+          <div class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6M2 12a9 9 0 0 1 9 9M2 16a5 5 0 0 1 5 5M2 20h.01"/></svg>
+            <h3>Cast</h3>
+            <ul>
+              <li>Cast to smart TVs (DLNA)</li>
+              <li>Chromecast and Google TV</li>
+              <li>Control playback from the phone</li>
+              <li>Updates itself when a new version is out</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block gallery" id="screenshots">
+      <div class="wrap">
+        <div class="block-head">
+          <h2>Take a look</h2>
+          <p>Straight from a phone running YouPipe. Swipe or scroll sideways to see more.</p>
+        </div>
+      </div>
+      <div class="shots" tabindex="0" aria-label="Screenshots">
+          <figure class="shot">
+            <div class="device"><img src="screenshots/1-home.webp" width="540" height="1200" alt="Home: Put together on your phone from what you watch" loading="lazy" decoding="async"></div>
+            <figcaption><b>Home</b><span>Put together on your phone from what you watch</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="device"><img src="screenshots/2-watch.webp" width="540" height="1200" alt="Watch: Comments, chapters, captions and SponsorBlock" loading="lazy" decoding="async"></div>
+            <figcaption><b>Watch</b><span>Comments, chapters, captions and SponsorBlock</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="device"><img src="screenshots/3-miniplayer.webp" width="540" height="1200" alt="Mini player: Floats while you browse; swipe up to open, down to close" loading="lazy" decoding="async"></div>
+            <figcaption><b>Mini player</b><span>Floats while you browse; swipe up to open, down to close</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="device"><img src="screenshots/4-shorts.webp" width="540" height="1200" alt="Shorts: Swipe through, with likes and dislikes" loading="lazy" decoding="async"></div>
+            <figcaption><b>Shorts</b><span>Swipe through, with likes and dislikes</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="device"><img src="screenshots/5-search.webp" width="540" height="1200" alt="Search: Channels, videos and Shorts, with filters" loading="lazy" decoding="async"></div>
+            <figcaption><b>Search</b><span>Channels, videos and Shorts, with filters</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="device"><img src="screenshots/6-channel.webp" width="540" height="1200" alt="Channels: Videos, Shorts, live and playlists" loading="lazy" decoding="async"></div>
+            <figcaption><b>Channels</b><span>Videos, Shorts, live and playlists</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="device"><img src="screenshots/7-playlist.webp" width="540" height="1200" alt="Playlists: Play all, shuffle or save to your library" loading="lazy" decoding="async"></div>
+            <figcaption><b>Playlists</b><span>Play all, shuffle or save to your library</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="device"><img src="screenshots/8-subscriptions.webp" width="540" height="1200" alt="Subscriptions: New uploads, no account needed" loading="lazy" decoding="async"></div>
+            <figcaption><b>Subscriptions</b><span>New uploads, no account needed</span></figcaption>
+          </figure>
+      </div>
+    </section>
+
+    <section class="block install" id="install">
+      <div class="wrap">
+        <div class="block-head">
+          <h2>Install in a minute</h2>
+          <p>YouPipe isn't on the Play Store, so you install it straight from our GitHub releases. You only do this once.</p>
+        </div>
+        <ol class="steps">
+          <li><h3>Download the APK</h3><p>Tap Download on this page. Your phone saves the file for you.</p></li>
+          <li><h3>Allow the install</h3><p>Open the file. If Android asks, allow installs from your browser or file manager.</p></li>
+          <li><h3>Open and watch</h3><p>That's it. From now on, the app tells you when there's a new version and installs it for you.</p></li>
+        </ol>
+        <div class="abis" id="abis">
+          <a class="abi best" href="https://github.com/SanuSanal/YouPipe/releases/latest" data-abi="arm64-v8a"><span class="mono">arm64-v8a</span><small>Phones from the last several years</small></a>
+          <a class="abi" href="https://github.com/SanuSanal/YouPipe/releases/latest" data-abi="armeabi-v7a"><span class="mono">armeabi-v7a</span><small>Older 32-bit phones</small></a>
+          <a class="abi" href="https://github.com/SanuSanal/YouPipe/releases/latest" data-abi="x86_64"><span class="mono">x86_64</span><small>Emulators and Chromebooks</small></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <div class="block-head">
+          <h2>What you watch stays yours</h2>
+          <p>No account needed, and nothing about what you watch leaves your phone except the requests to YouTube itself.</p>
+        </div>
+        <div class="privacy">
+          <div><h3>No ads, no trackers</h3><p>There's no analytics or tracking code in the app.</p></div>
+          <div><h3>On your phone</h3><p>Your subscriptions, history, playlists and downloads are stored on your device. Even Home is put together on your phone from what you watch.</p></div>
+          <div><h3>Sign-in is optional</h3><p>If you sign in, it happens on Google's own page. The app never sees your password.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="faq">
+      <div class="wrap">
+        <div class="block-head"><h2>Questions</h2></div>
+        <div class="faq">
+          <details><summary>Is it really free?</summary><p>Yes. There are no ads, subscriptions or paid features. If you'd like to help, you can support the project below.</p></details>
+          <details><summary>Why isn't it on the Play Store?</summary><p>It uses YouTube's private API, which the Play Store doesn't allow. That's why you download it from GitHub instead.</p></details>
+          <details><summary>How do I get updates?</summary><p>When you open the app, it checks for a new version. If there is one, it shows what's new and installs it after you tap Update.</p></details>
+          <details><summary>Is the APK safe?</summary><p>Every release is built from the public source code by GitHub Actions and signed with the same key. Android refuses any update that isn't signed with that key.</p></details>
+          <details><summary>Do I need a Google account?</summary><p>No. Everything works without one, including subscriptions: they're kept on your phone and the new uploads come from each channel's public feed. Signing in only adds your YouTube library, likes and recommendations.</p></details>
+          <details><summary>Can I bring my subscriptions from YouTube or NewPipe?</summary><p>Yes. Open Subscriptions, tap All, then ⋮ → Import, and pick the subscriptions file from Google Takeout or a NewPipe export.</p></details>
+          <details><summary>How does skipping sponsors work?</summary><p>YouPipe uses SponsorBlock, a community database of sponsor segments, intros and reminders to subscribe. You choose which kinds to skip. The dislike counts come from the Return YouTube Dislike project.</p></details>
+          <details><summary>Can I watch on my TV?</summary><p>Yes. Tap the Cast button to play on a smart TV on the same Wi-Fi (most Samsung, LG and other smart TVs support DLNA) or on a Chromecast or Google TV. Your phone streams the video to the TV, so keep it on the same Wi-Fi while you watch.</p></details>
+          <details><summary>A video says YouTube wants to confirm I'm not a bot. What now?</summary><p>YouTube sometimes stops anonymous playback from a network for a while, usually after a lot of videos in a short time. Wait a bit and try again, or switch between Wi-Fi and mobile data.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="support">
+      <div class="wrap support">
+        <div>
+          <h2>Keep it going</h2>
+          <p>YouPipe is made in spare time and will always be free. A coffee helps keep it updated when YouTube changes things.</p>
+        </div>
+        <div class="donate">
+          <a class="bmc" href="https://www.buymeacoffee.com/sanalm555k">Buy me a coffee</a>
+          <a class="pp" href="https://www.paypal.com/donate/?hosted_button_id=HBGNBZL5VRMTY">PayPal</a>
+          <a class="rv" href="https://revolut.me/sanalmyfyj">Revolut</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <div class="row">
+      <a class="brand" href="./"><img src="logo.svg" alt="" width="36" height="36">YouPipe</a>
+      <nav>
+        <a href="https://github.com/SanuSanal/YouPipe">Source code</a>
+        <a href="https://github.com/SanuSanal/YouPipe/releases">All releases</a>
+        <a href="https://sanusanal.github.io/YouPipe-Music/">YouPipe Music</a>
+      </nav>
+    </div>
+    <p>YouPipe is an unofficial app. It isn't affiliated with, endorsed by or connected to YouTube or Google LLC. All trademarks, videos and content belong to their owners. Sponsor segments come from SponsorBlock and dislike counts from Return YouTube Dislike.</p>
+  </footer>
+
+  <script>
+    // Point the download buttons straight at the latest release's APKs, with the version and size.
+    (async () => {
+      const mb = (b) => (b / 1048576).toFixed(1) + ' MB';
+      try {
+        const res = await fetch('https://api.github.com/repos/SanuSanal/YouPipe/releases/latest');
+        if (!res.ok) return;
+        const release = await res.json();
+        const version = release.tag_name.replace(/^v/, '');
+        const apk = (abi) => release.assets.find((a) => a.name.endsWith('-' + abi + '.apk'));
+
+        // On an Android browser, pick 32-bit ARM or x86 when it says so. Everywhere else (a PC downloading for a
+        // phone) and by default, arm64.
+        let abi = 'arm64-v8a';
+        try {
+          const hints = await navigator.userAgentData?.getHighEntropyValues(['architecture', 'bitness', 'platform']);
+          if (hints?.platform !== 'Android') throw 0;
+          if (hints.architecture === 'x86') abi = 'x86_64';
+          else if (hints?.architecture === 'arm' && hints?.bitness === '32') abi = 'armeabi-v7a';
+        } catch {}
+
+        const main = apk(abi) || apk('arm64-v8a');
+        if (main) {
+          document.getElementById('download').href = main.browser_download_url;
+          document.getElementById('download-label').textContent = 'Download v' + version;
+          document.getElementById('download-meta').innerHTML =
+            (main.name.match(/-(arm64-v8a|armeabi-v7a|x86_64)\.apk$/)?.[1] ?? '') + ' · ' + mb(main.size) +
+            ' · <a href="#install">Other versions</a>';
+        }
+        for (const link of document.querySelectorAll('#abis [data-abi]')) {
+          const a = apk(link.dataset.abi);
+          if (a) link.href = a.browser_download_url;
+        }
+      } catch {}
+    })();
+  </script>
+</body>
+</html>

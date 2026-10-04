@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "webClientVersion": "2.20261002.01.00",
+  "note": "Read by the app at most every 12 hours (lib/features/remote_config.dart, docs/remote_config.md)."
+}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 30" width="132" height="30">
+  <!-- Top-bar wordmark: the screen + pipe mark, then "YouPipe" in Roboto (dark theme: white text) -->
+  <defs>
+    <linearGradient id="bore" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7A0000"/>
+      <stop offset="1" stop-color="#C40000"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="3" width="34" height="24" rx="6" fill="#FF0000"/>
+  <path d="M12.5 10.5 H22 A2 4.5 0 0 1 22 19.5 H12.5 A2 4.5 0 0 1 12.5 10.5 Z" fill="#FFFFFF"/>
+  <ellipse cx="22" cy="15" rx="2" ry="4.5" fill="#FFFFFF"/>
+  <ellipse cx="22" cy="15" rx="1.25" ry="3.2" fill="url(#bore)"/>
+  <text x="38" y="23" font-family="Roboto, Arial, sans-serif" font-weight="700" font-size="20" letter-spacing="-0.8" fill="#FFFFFF">YouPipe</text>
+</svg>

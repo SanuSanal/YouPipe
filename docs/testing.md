@@ -1,0 +1,50 @@
+# Testing
+
+## Automated
+
+```bash
+flutter analyze                          # must report no issues
+flutter test                             # offline: parsers against the recorded fixtures
+flutter test --tags live --run-skipped   # hits the real InnerTube API (smoke test for YouTube changes)
+```
+
+| Test | Covers |
+|---|---|
+| `test/innertube/parsers_test.dart` | Home (signed-out nudge), search (videos, Shorts shelf, continuation, a channel's official card), related (`lockupViewModel`), channel (header, tabs, items, `[views, age]` lockups), playlist, comments, Shorts sequence |
+| `test/innertube/live_test.dart` | The same against the live API, plus every continuation and suggestions. Tagged `live`, skipped by default (`dart_test.yaml`) |
+| `test/util/format_test.dart` | View counts, "3 hours ago", durations |
+| `test/features/captions_test.dart` | Stripping the word timings of auto-generated captions (`cleanVtt`) |
+| `test/home_cache_test.dart` | The Home launch cache: round trip, max age, unreadable data |
+| `test/source_hygiene_test.dart` | No control characters in sources (a heredoc once turned a regex's word boundary into a backspace); `longAge` |
+| `test/import_export_test.dart` | Takeout CSV and NewPipe JSON subscriptions |
+| `test/updater_test.dart` | Release parsing, version comparison, APK choice, notes |
+
+## The playback suite (on the device)
+
+**Settings → About → Diagnostics** (`lib/features/diagnostics/diagnostics_screen.dart`, the Phase 0 suite) runs the playback checks and logs each result as `SPIKE|…`. Run it after every NewPipeExtractor bump:
+
+- **20 VODs** from 8 varied searches. Each is opened at ≤1080p, seeked to **75%** (well past the old 1 MB cap), and must advance 5 s.
+- **2 4K videos** (`maxHeight: 2160`).
+- **2 live streams:** must keep playing without buffering for 6 s. The position stays near the end of the sliding window, so it can't be checked.
+- **5 Shorts** from the Shorts feed.
+- **An age-restricted video** (`6kLq3WMV1nU`): must fail with `AGE_RESTRICTED`.
+- **Comments:** first page, second page, and one reply thread.
+
+The test follows the service's *current* controller, so a mid-play recovery (re-resolve + resume) counts as a pass and is reported as `RECOVERED xN`.
+
+**Background test** (the "Background test" button): plays a video longer than 20 minutes from the start and logs `SPIKE|bg pos=…` every 30 s. Press Home, turn the screen off, and read the log after 10+ minutes.
+
+## On a device
+
+- **Build and install:** `flutter build apk --debug`, then `adb install -r build/app/outputs/flutter-apk/app-debug.apk`.
+- **Debug builds are slow** (JIT, no R8): about 3.6 s to the first frame, against about 0.4 s for a release build. Judge startup and scrolling speed on a release build (`flutter build apk --release --split-per-abi`, then install the arm64 APK). Without `key.properties` it's signed with the debug key, so it installs over a debug build and keeps the data.
+- **Forcing the muxed stream:** `flutter build apk --release --split-per-abi --dart-define=FORCE_MUXED=true` skips the DASH manifest, so the muxed stream and its relay (`PlaybackProxy.kt`) get exercised. Don't ship that build.
+- **Startup timing:** `adb shell am start -W -n com.youpipe.app/.MainActivity` (TotalTime) after `am force-stop`.
+- **Launch** with `adb shell monkey -p com.youpipe.app -c android.intent.category.LAUNCHER 1`.
+- **Use the Android SDK's adb** (`%LOCALAPPDATA%\Android\sdk\platform-tools\adb.exe`), not the "Minimal ADB" on PATH. The test phone is a Moto edge 20 (`ZD22248D34`, 1080×2400, Android 13).
+- **Bottom nav** at y≈2235: Home x≈135, Shorts x≈405, Subscriptions x≈675, You x≈945. Top-bar search is at (1005, 147).
+- **Raw responses:** debug builds save InnerTube responses to `cache/innertube` (docs/innertube.md).
+- **Logs:** `adb logcat -s flutter:I | grep "SPIKE|\|YouPipe:"`. Native extraction logs use the `YouPipe` tag (`getVideoInfo <id> fetched/streams/done +ms`, and the `clients:` line).
+- **Raise the logcat buffer** (`adb logcat -G 16M`) before a full suite run, or early results rotate out.
+- **Read results from the device.** Stream URLs are bound to the phone's IP, so they can't be replayed from the PC.
+- **Screenshots:** stay inside the app; don't capture the user's home screen.

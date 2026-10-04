@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432" width="432" height="432">
+  <!-- Adaptive-icon foreground: the mark scaled into the 66dp safe zone of the 108dp canvas (white background layer) -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.62" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E4E4E4"/>
+    </linearGradient>
+    <linearGradient id="bore" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7A0000"/><stop offset="1" stop-color="#C40000"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(91 128.5) scale(1.5625) translate(-16 -40)">
+    <rect x="16" y="40" width="160" height="112" rx="26" fill="#FF0000"/>
+    <path d="M74 77 H119 A9.5 19 0 0 1 119 115 H74 A9.5 19 0 0 1 74 77 Z" fill="url(#body)"/>
+    <ellipse cx="119" cy="96" rx="9.5" ry="19" fill="#FFFFFF"/>
+    <ellipse cx="119" cy="96" rx="6" ry="13.6" fill="url(#bore)"/>
+  </g>
+</svg>

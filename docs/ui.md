@@ -1,0 +1,112 @@
+# UI
+
+## Product rule: look like YouTube Android, with YouPipe branding
+
+- **Match YouTube Android:** screens, layouts, interactions and wording follow the YouTube Android app (2025–26). When in doubt, match YouTube.
+- **Branding:**
+  - The mark is a red rounded "screen" with the YouPipe Music white cylinder inside (`assets/branding/logo.svg`).
+  - The wordmark is the mark plus "YouPipe" in Roboto Bold (`Wordmark` widget).
+  - The Shorts glyph is our own: a phone-shaped outline with a play triangle (`ShortsIcon`), not YouTube's mark.
+  - **Never ship** YouTube logos, YouTube's Shorts icon or YouTube Sans. Use Roboto and Material Symbols (`material_symbols_icons`, outlined, weight 300; `fill: 1` for selected).
+- **App name:** "YouPipe", applicationId `com.youpipe.app`.
+- **Icons:**
+  - Adaptive launcher icon: white background with the red mark (`logo_foreground.svg`), plus a monochrome themed icon (`logo_monochrome.svg`, pipe cut out).
+  - Splash: the mark on white, or on `#0F0F0F` in dark mode.
+  - Notification icon: `res/drawable/ic_stat_youpipe.xml`.
+- **Regenerating:**
+  1. Render the SVGs with ImageMagick: `magick -background none -density 512 x.svg -resize 1024x1024 x_1024.png`.
+  2. Run `dart run flutter_launcher_icons`.
+  3. Run `dart run flutter_native_splash:create`.
+
+## Theme (`lib/ui/theme/yt_theme.dart`)
+
+Both themes follow the device setting by default (Settings → Appearance). Read the tokens with `context.yt`.
+
+| Token | Dark | Light |
+|---|---|---|
+| background | `#0F0F0F` | `#FFFFFF` |
+| raised (sheets, panels) | `#212121` | `#FFFFFF` |
+| chip / pill | `#272727` | `#F2F2F2` |
+| chipSelected / onChipSelected | `#F1F1F1` / `#0F0F0F` | `#0F0F0F` / `#FFFFFF` |
+| textPrimary / textSecondary | `#F1F1F1` / `#AAAAAA` | `#0F0F0F` / `#606060` |
+| link | `#3EA6FF` | `#065FD4` |
+| subscribe / onSubscribe | `#F1F1F1` / `#0F0F0F` | `#0F0F0F` / `#FFFFFF` |
+| progress (seek bar, watched bar) | `#FF0033` | `#FF0033` |
+
+**Sizes (`YtSizes`):**
+- top bar 48, nav bar 48 (+ inset), mini player 55% of the width (16:9, radius 12, margin 8);
+- chip 32 high, radius 8; pill 36 high, stadium;
+- feed avatar 36; row thumbnail 160 wide, radius 8; sheets radius 12.
+
+**Type (`YtText`):**
+- feed title 15/w400;
+- row title 14;
+- meta 12, secondary colour;
+- watch title 18/w700;
+- section title 20/w700.
+
+**Toasts** use `showSnack` (in a widget) or `showGlobalSnack` (outside one).
+
+## Screens
+
+- **Shell (`lib/ui/shell/app_shell.dart`):**
+  - **Bottom nav:** Home · Shorts · Subscriptions · You, with filled icons for the selected tab. Each tab is a go_router `StatefulShellBranch`, and detail pages push inside the tab.
+  - **Watch panel:** one `AnimationController` (0 = mini player, 1 = watch page) morphs the video's rect between the mini player and the full player.
+    - **The mini player** is YouTube's floating one: a 16:9 card with rounded corners (12), 55% of the screen width, 8 above the nav bar in the bottom-right corner. It floats over the page (the page reserves no space for it) and has a red progress line along its bottom.
+    - A tap on the card shows its controls for 3 s: expand (top left), close (top right), and previous · play/pause · next. A tap on the shown controls opens the watch page.
+    - **Room at the end of pages:** while the card shows, the shell sets the pages' bottom padding to its height plus margins, so plain lists end above it and sliver pages end with `SliverBottomInset`. The last item (Settings on You, say) can always scroll clear of the card.
+    - **Swipe up** on the card expands it (it follows the finger); **swipe down** closes it (it slides down and fades, then playback stops); **drag sideways** moves it between the bottom-left and bottom-right corners.
+    - Drag the expanded video down to minimise.
+    - One keyed `GestureDetector` wraps the video at every size, so a drag survives the switch between the mini card, the morphing video and `PlayerView`.
+    - The nav bar slides away as it expands. The status bar over the expanded player is black.
+    - The mini player is hidden on the Shorts tab.
+  - **Fullscreen** switches to landscape and immersive mode.
+  - **PiP** shows only the video.
+  - **Back order:** fullscreen → open panel (description/comments/queue) → expanded player → pages → Home → exit.
+- **Home:**
+  - The top bar floats: wordmark, Cast, search. Once it has floated away, `StatusBarScrim` keeps the status bar strip filled with the page background (Home, Subscriptions, You), so the feed doesn't scroll visibly under the clock.
+  - A floating chip bar.
+  - Full-width feed cards: edge-to-edge 16:9 thumbnail with a duration/LIVE badge and a red watched bar, then avatar, title, `channel · views · age`, and ⋮.
+  - A Shorts shelf after the second video, a first-run card, pull-to-refresh, and infinite scroll.
+- **Watch page:**
+  - The player, then the title, then `views  age  ...more` (opens the Description panel).
+  - The channel row with Subscribe.
+  - Pills: like | dislike (Return YouTube Dislike), Share, Download (with progress), Save, Watch later.
+  - The comments card (opens the Comments panel, with Top/Newest chips), the Queue card, and related cards.
+  - **Panels open under the player** (the player keeps playing), as in YouTube.
+- **Player controls (`player_view.dart`):**
+  - Tap to show; they auto-hide after 3 s.
+  - Minimise chevron, CC, Cast, settings.
+  - Previous / play / next.
+  - Time, fullscreen, and the seek bar: red, buffered range, chapter gaps, SponsorBlock colours, and a storyboard preview with time and chapter while dragging.
+  - Double-tap ±10 s with a ripple; hold for 2× speed.
+  - **Settings sheet:** Quality, Playback speed, Captions, Loop, Sleep timer.
+- **Shorts:**
+  - A vertical pager, black, with the right rail: like, dislike, comments, share, ⋮.
+  - Channel and Subscribe at the bottom left, the title, and a thin white progress bar.
+  - Tap to pause; the neighbours preload.
+- **Search:**
+  - A rounded grey field; history rows with a clock icon (long-press to remove) and suggestions with ↖ to fill.
+  - **Results:** feed cards, channel rows with Subscribe, and Shorts and titled shelves. The filter sheet uses YouTube's own groups.
+- **Channel:**
+  - Banner (rounded), avatar 72, name, handle · subscribers · videos, an About sheet, and full-width Subscribe.
+  - Scrollable tabs (Home shelves, Videos/Shorts/Live with Latest/Popular/Oldest chips, Releases, Playlists, Podcasts).
+  - Shorts show in a 3-column grid.
+- **Playlist** (YouTube and local):
+  - A thumbnail-tinted header with the big thumbnail, title, owner and metadata.
+  - White "Play all" and grey "Shuffle" pills, plus save and share.
+  - Rows with ⋮. Your own playlists and Watch later can be reordered by dragging.
+  - **Subscribed** asks "Unsubscribe from <channel>?" before unsubscribing, like YouTube (it reaches the account when signed in).
+  - Your own playlists have ⋮ → Rename and Delete playlist; deleting asks first ("Delete playlist?"), like YouTube.
+- **Subscriptions:**
+  - A strip of channel avatars plus "All".
+  - Chips: All, Today, Videos, Shorts, Continue watching, Unwatched.
+  - The feed with a Shorts shelf. The empty state invites you to find channels.
+- **You:**
+  - The account header (or the optional sign-in), a History carousel, and Playlists (Liked videos, Watch later, yours, saved).
+  - Downloads, Your subscriptions, History, Settings.
+- **Settings:**
+  - General (appearance, language, location, PiP).
+  - Autoplay and resume.
+  - Video quality preferences (YouTube's three).
+  - SponsorBlock, Updates, history controls, About (diagnostics, licences).
