@@ -25,6 +25,7 @@ import 'ui/router.dart';
 import 'ui/shell/app_shell.dart';
 import 'ui/widgets/top_bar.dart';
 import 'ui/widgets/video_menu.dart';
+import 'ui/layout.dart';
 
 /// Providers watched from the app root so they're created (and hook themselves in) at startup.
 final rootProviders = <ProviderListenable<Object?>>[];
@@ -59,12 +60,14 @@ void registerFeatures() {
     ),
   );
 
-  // Casting to Chromecast and DLNA TVs.
-  rootProviders.add(castBridgeProvider);
-  remoteControlsOf = castRemoteOf;
-  castingViewBuilder = castingView;
-  playerCastButton = () => const CastButton(color: Colors.white);
-  topBarExtraActions.add((_) => const CastButton());
+  // Casting to Chromecast and DLNA TVs (not from a TV: it is the big screen).
+  if (!DeviceInfo.current.tv) {
+    rootProviders.add(castBridgeProvider);
+    remoteControlsOf = castRemoteOf;
+    castingViewBuilder = castingView;
+    playerCastButton = () => const CastButton(color: Colors.white);
+    topBarExtraActions.add((_) => const CastButton());
+  }
 
   // In-app updates from GitHub Releases.
   shellStartHooks.add(checkForUpdateOnLaunch);

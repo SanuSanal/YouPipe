@@ -29,7 +29,7 @@ Flutter UI (lib/features/*, lib/ui/*)  ── Riverpod 3 providers (lib/provider
 | `lib/innertube/` | InnerTube client, models, parsers. No Flutter imports, so tests run in plain Dart |
 | `lib/data/` | `VideoInfoService`, drift DB, `LibraryRepository`, `SubscriptionsFeed`, `HomeMixer`, Return YouTube Dislike |
 | `lib/player/` | `VideoPlayerService`, `YouPipeAudioHandler`, `Pip`, the cast/DLNA engine |
-| `lib/ui/` | Theme (`yt_theme.dart`), router, navigation helpers, the shell (bottom nav + watch panel), shared widgets |
+| `lib/ui/` | Theme (`yt_theme.dart`), router, navigation helpers, the shell (bottom nav or side rail + watch panel), shared widgets, and `layout.dart` (phone/tablet/TV, grid columns, orientation; docs/ui.md) |
 | `lib/features/<area>/` | Screens and optional features (home, search, watch, shorts, channel, playlist, subscriptions, you, settings, downloads, account, cast, sponsorblock, update, diagnostics) |
 | `android/app/src/main/kotlin/com/youpipe/app/` | Native channels: stream extraction, downloads (WorkManager), cookies, cast + LAN relay, updater, PiP, notification permission |
 | `tool/inspect_feed.dart` | Prints how the parsers read a recorded response |

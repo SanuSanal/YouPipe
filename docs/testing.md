@@ -34,6 +34,18 @@ The test follows the service's *current* controller, so a mid-play recovery (re-
 
 **Background test** (the "Background test" button): plays a video longer than 20 minutes from the start and logs `SPIKE|bg pos=…` every 30 s. Press Home, turn the screen off, and read the log after 10+ minutes.
 
+## Tablets and TVs (emulators)
+
+- **AVDs** (created 2026-10-04):
+  - `YouPipe_TV`: Google TV, Android 16, 1080p (`system-images;android-36;google-tv;x86_64`). The older API 30 TV image is 32-bit x86, which Flutter can't run on.
+  - `YouPipe_Tablet`: Pixel C, Android 13 (`system-images;android-33;google_apis;x86_64`), 1280×900 dp.
+  - Start: `emulator -avd YouPipe_TV -no-snapshot-save` (it's `emulator-5554`; pass `-s` to adb when the phone is connected too).
+- **Install the `x86_64` split** of the release build (`build/app/outputs/flutter-apk/app-x86_64-release.apk`).
+- **The remote:** `adb shell input keyevent KEYCODE_DPAD_UP|DOWN|LEFT|RIGHT|DPAD_CENTER|BACK|MEDIA_PLAY_PAUSE`; text with `adb shell input text`.
+- **The TV launcher:** `adb shell cmd package query-activities -a android.intent.action.MAIN -c android.intent.category.LEANBACK_LAUNCHER` must list `com.youpipe.app`. The emulator's first-run "Set up Google TV" screen sits on the launcher; start the app with `am start` and don't cancel the setup (it disables the network).
+- **Rotate the tablet:** `settings put system accelerometer_rotation 0`, then `settings put system user_rotation 0|1`.
+- **Debug focus:** debug builds log every focus change (`FOCUS …` in logcat).
+
 ## On a device
 
 - **Build and install:** `flutter build apk --debug`, then `adb install -r build/app/outputs/flutter-apk/app-debug.apk`.

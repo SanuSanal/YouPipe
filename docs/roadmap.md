@@ -19,10 +19,11 @@
 | 3 | Optional Google sign-in, account feeds, sync | Yes (the user's account, 2026-10-04; account.md) |
 | 4 | Casting (Chromecast, DLNA) for video | DLNA yes (the user's TV); Chromecast not tried |
 | 4 | In-app updater, release workflow, signing, R8 release build, website (like YouPipe Music's), README, remote config | Release build runs on the phone; repo and website published 2026-10-04 (https://github.com/SanuSanal/YouPipe, https://sanusanal.github.io/YouPipe/); remote config served. First release waits for the signing secrets |
+| 6 | Tablets (rotation, 2–4 column grids, side rail, two-column watch page) and Android TV / Fire TV (launcher banner, the remote: focus ring, keys, starting focus) | Google TV emulator (Android 16) and Pixel C tablet emulator, 2026-10-04; phone unchanged. A real TV not yet |
 
 ## Next
 
-1. **On-device pass** over everything still marked "not yet" above. Capture the watch page, mini player and Shorts screenshots for the website (site.md).
+1. **A real TV:** sideload on an Android/Google TV or a Fire TV stick (the emulators passed; docs/release.md).
 2. **First release:** add the signing secrets (`ANDROID_KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`; release.md), then tag `v0.1.0`. The repo, Pages and remote config are live.
 
 **Phase 5 (shared core) is deferred:** YouPipe is an independent project, so the two apps don't share a package. Useful fixes are copied across by hand.

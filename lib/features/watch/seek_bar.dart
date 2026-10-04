@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
@@ -25,6 +26,9 @@ class SeekBar extends ConsumerStatefulWidget {
 class _SeekBarState extends ConsumerState<SeekBar> {
   double? _drag;
 
+  /// Focused with the TV remote or a keyboard: Left/Right move the preview 10 s, releasing the key seeks.
+  bool _focused = false;
+
   @override
   Widget build(BuildContext context) {
     final info = ref.watch(currentInfoProvider);
@@ -48,7 +52,7 @@ class _SeekBarState extends ConsumerState<SeekBar> {
             chapterStarts: starts,
             segments: [for (final s in segments) (s.$1.inMilliseconds / total, s.$2.inMilliseconds / total, s.$3)],
             thumb: !widget.minimal,
-            dragging: _drag != null,
+            dragging: _drag != null || _focused,
           ),
         );
         if (widget.minimal) return SizedBox(height: 3, child: bar);
@@ -62,34 +66,52 @@ class _SeekBarState extends ConsumerState<SeekBar> {
               widget.onDragging?.call(false);
             }
 
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onHorizontalDragStart: (d) {
-                widget.onDragging?.call(true);
-                setState(() => _drag = frac(d.localPosition.dx));
-              },
-              onHorizontalDragUpdate: (d) => setState(() => _drag = frac(d.localPosition.dx)),
-              onHorizontalDragEnd: (_) => end(),
-              onTapUp: (d) {
-                widget.controller.seekTo(Duration(milliseconds: (frac(d.localPosition.dx) * total).round()));
-              },
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  SizedBox(
-                    height: 28,
-                    child: Align(alignment: Alignment.center, child: bar),
-                  ),
-                  if (_drag != null)
-                    Positioned(
-                      bottom: 28,
-                      left: (_drag! * box.maxWidth - 80).clamp(4.0, box.maxWidth - 164),
-                      child: _Preview(
-                        info: info,
-                        at: Duration(milliseconds: (_drag! * total).round()),
-                      ),
+            KeyEventResult onKey(FocusNode _, KeyEvent e) {
+              final left = e.logicalKey == LogicalKeyboardKey.arrowLeft;
+              final right = e.logicalKey == LogicalKeyboardKey.arrowRight;
+              if (!left && !right) return KeyEventResult.ignored;
+              if (e is KeyUpEvent) {
+                end();
+              } else {
+                final step = 10000 / total * (left ? -1 : 1);
+                if (_drag == null) widget.onDragging?.call(true);
+                setState(() => _drag = ((_drag ?? played) + step).clamp(0.0, 1.0));
+              }
+              return KeyEventResult.handled;
+            }
+
+            return Focus(
+              onFocusChange: (f) => setState(() => _focused = f),
+              onKeyEvent: onKey,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragStart: (d) {
+                  widget.onDragging?.call(true);
+                  setState(() => _drag = frac(d.localPosition.dx));
+                },
+                onHorizontalDragUpdate: (d) => setState(() => _drag = frac(d.localPosition.dx)),
+                onHorizontalDragEnd: (_) => end(),
+                onTapUp: (d) {
+                  widget.controller.seekTo(Duration(milliseconds: (frac(d.localPosition.dx) * total).round()));
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    SizedBox(
+                      height: 28,
+                      child: Align(alignment: Alignment.center, child: bar),
                     ),
-                ],
+                    if (_drag != null)
+                      Positioned(
+                        bottom: 28,
+                        left: (_drag! * box.maxWidth - 80).clamp(4.0, box.maxWidth - 164),
+                        child: _Preview(
+                          info: info,
+                          at: Duration(milliseconds: (_drag! * total).round()),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             );
           },

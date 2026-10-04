@@ -323,78 +323,79 @@ class DownloadsScreen extends ConsumerWidget {
         title: const Text('Downloads'),
         leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Symbols.arrow_back)),
       ),
-      body: all.isEmpty
-          ? const EmptyView(
-              icon: Symbols.download,
-              title: 'No downloads',
-              message: 'Videos you download show up here, and play without a connection.',
-            )
-          : ListView(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                  child: Text(
-                    '${all.length} video${all.length == 1 ? '' : 's'} · ${_size(used)}',
-                    style: TextStyle(color: c.textSecondary, fontSize: 13),
+      body: MaxContentWidth(
+        child: all.isEmpty
+            ? const EmptyView(
+                icon: Symbols.download,
+                title: 'No downloads',
+                message: 'Videos you download show up here, and play without a connection.',
+              )
+            : ListView(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: Text(
+                      '${all.length} video${all.length == 1 ? '' : 's'} · ${_size(used)}',
+                      style: TextStyle(color: c.textSecondary, fontSize: 13),
+                    ),
                   ),
-                ),
-                for (final d in all)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      VideoRow(
-                        d.video,
-                        onTap: switch (d.row.state) {
-                          DownloadState.done => null,
-                          DownloadState.failed => () => _retry(ref, d),
-                          _ => () => _showManage(context, ref, d),
-                        },
-                        trailing: MenuButton(onTap: () => _showManage(context, ref, d)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(184, 0, 16, 8),
-                        child: switch (d.row.state) {
-                          DownloadState.done => Row(
-                            children: [
-                              Icon(Symbols.download_done, size: 16, color: c.textSecondary),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${d.row.height}p · ${_size(d.row.sizeBytes)}',
-                                style: YtText.meta.copyWith(color: c.textSecondary),
-                              ),
-                            ],
-                          ),
-                          DownloadState.downloading || DownloadState.queued => Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              LinearProgressIndicator(
-                                value: d.row.state == DownloadState.queued ? null : d.progress,
-                                color: c.link,
-                                minHeight: 3,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                d.row.state == DownloadState.queued
-                                    ? 'Waiting to download…'
-                                    : 'Downloading · ${_size(d.row.downloadedBytes)} of ${_size(d.row.sizeBytes)}',
-                                style: YtText.meta.copyWith(color: c.textSecondary),
-                              ),
-                            ],
-                          ),
-                          DownloadState.failed => GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => _retry(ref, d),
-                            child: Text(
-                              'Download failed. Tap to retry',
-                              style: YtText.meta.copyWith(color: YtColors.red),
+                  for (final d in all)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        VideoRow(
+                          d.video,
+                          onTap: switch (d.row.state) {
+                            DownloadState.done => null,
+                            DownloadState.failed => () => _retry(ref, d),
+                            _ => () => _showManage(context, ref, d),
+                          },
+                          trailing: MenuButton(onTap: () => _showManage(context, ref, d)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(184, 0, 16, 8),
+                          child: switch (d.row.state) {
+                            DownloadState.done => Row(
+                              children: [
+                                Icon(Symbols.download_done, size: 16, color: c.textSecondary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${d.row.height}p · ${_size(d.row.sizeBytes)}',
+                                  style: YtText.meta.copyWith(color: c.textSecondary),
+                                ),
+                              ],
                             ),
-                          ),
-                        },
-                      ),
-                    ],
-                  ),
-              ],
-            ),
+                            DownloadState.downloading || DownloadState.queued => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                LinearProgressIndicator(
+                                  value: d.row.state == DownloadState.queued ? null : d.progress,
+                                  color: c.link,
+                                  minHeight: 3,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  d.row.state == DownloadState.queued
+                                      ? 'Waiting to download…'
+                                      : 'Downloading · ${_size(d.row.downloadedBytes)} of ${_size(d.row.sizeBytes)}',
+                                  style: YtText.meta.copyWith(color: c.textSecondary),
+                                ),
+                              ],
+                            ),
+                            DownloadState.failed => InkWell(
+                              onTap: () => _retry(ref, d),
+                              child: Text(
+                                'Download failed. Tap to retry',
+                                style: YtText.meta.copyWith(color: YtColors.red),
+                              ),
+                            ),
+                          },
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+      ),
     );
   }
 }

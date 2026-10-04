@@ -11,10 +11,12 @@ import '../../data/ryd.dart';
 import '../../data/video_info.dart';
 import '../../innertube/models.dart';
 import '../../providers.dart';
+import '../../ui/layout.dart';
 import '../../ui/navigation.dart';
 import '../../ui/theme/yt_theme.dart';
 import '../../ui/widgets/common.dart';
 import '../../ui/widgets/video_menu.dart';
+import '../../ui/widgets/video_tiles.dart';
 import '../../util/format.dart';
 import '../watch/watch_details.dart';
 import '../../player/playback_proxy.dart';
@@ -39,11 +41,27 @@ class _ShortsScreenState extends ConsumerState<ShortsScreen> {
   int _index = 0;
   Object? _error;
 
+  /// Turns pages for the TV remote's Up/Down (touch swipes the PageView directly).
+  final _pages = PageController();
+
   @override
   void initState() {
     super.initState();
     if (widget.startId != null) _ids.add(widget.startId!);
     _more();
+  }
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
+
+  void _step(int by) {
+    const d = Duration(milliseconds: 250);
+    by > 0
+        ? _pages.nextPage(duration: d, curve: Curves.easeOut)
+        : _pages.previousPage(duration: d, curve: Curves.easeOut);
   }
 
   Future<void> _more() async {
@@ -86,18 +104,29 @@ class _ShortsScreenState extends ConsumerState<ShortsScreen> {
             : Stack(
                 children: [
                   PageView.builder(
+                    controller: _pages,
                     scrollDirection: Axis.vertical,
                     itemCount: _ids.length,
                     onPageChanged: (i) {
                       setState(() => _index = i);
                       if (i > _ids.length - 4) _more();
                     },
-                    itemBuilder: (context, i) => _ShortPage(
-                      key: ValueKey(_ids[i]),
-                      videoId: _ids[i],
-                      playing: active && i == _index,
-                      preload: (i - _index).abs() <= 1,
-                    ),
+                    itemBuilder: (context, i) {
+                      final page = _ShortPage(
+                        key: ValueKey(_ids[i]),
+                        videoId: _ids[i],
+                        playing: active && i == _index,
+                        preload: (i - _index).abs() <= 1,
+                        onStep: _step,
+                      );
+                      // Landscape (tablets, TVs): a centred 9:16 column, like YouTube, instead of a cropped band.
+                      final size = MediaQuery.sizeOf(context);
+                      return size.width > size.height
+                          ? Center(
+                              child: AspectRatio(aspectRatio: 9 / 16, child: page),
+                            )
+                          : page;
+                    },
                   ),
                   SafeArea(
                     child: Row(
@@ -123,11 +152,20 @@ class _ShortsScreenState extends ConsumerState<ShortsScreen> {
 }
 
 class _ShortPage extends ConsumerStatefulWidget {
-  const _ShortPage({super.key, required this.videoId, required this.playing, required this.preload});
+  const _ShortPage({
+    super.key,
+    required this.videoId,
+    required this.playing,
+    required this.preload,
+    required this.onStep,
+  });
 
   final String videoId;
   final bool playing;
   final bool preload;
+
+  /// The remote's Up/Down on the video: the previous or next Short.
+  final ValueChanged<int> onStep;
 
   @override
   ConsumerState<_ShortPage> createState() => _ShortPageState();
@@ -140,6 +178,9 @@ class _ShortPageState extends ConsumerState<_ShortPage> {
   bool _opening = false;
   bool _recorded = false;
 
+  /// The video, focused on a TV (and after paging with the remote), so Select and Up/Down reach it.
+  final _videoFocus = FocusNode(debugLabel: 'short');
+
   @override
   void initState() {
     super.initState();
@@ -151,6 +192,28 @@ class _ShortPageState extends ConsumerState<_ShortPage> {
     super.didUpdateWidget(oldWidget);
     if (widget.preload && _c == null) _open();
     _apply();
+    // Paging with the remote: focus follows to the Short that just came on screen.
+    if (widget.playing && !oldWidget.playing && FocusManager.instance.highlightMode == FocusHighlightMode.traditional) {
+      _videoFocus.requestFocus();
+    }
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (e is KeyUpEvent || !node.hasPrimaryFocus) return KeyEventResult.ignored;
+    final key = e.logicalKey;
+    if (key == LogicalKeyboardKey.arrowDown || key == LogicalKeyboardKey.arrowUp) {
+      widget.onStep(key == LogicalKeyboardKey.arrowDown ? 1 : -1);
+      return KeyEventResult.handled;
+    }
+    final c = _c;
+    if (c != null &&
+        (key == LogicalKeyboardKey.select ||
+            key == LogicalKeyboardKey.enter ||
+            key == LogicalKeyboardKey.mediaPlayPause)) {
+      setState(() => c.value.isPlaying ? c.pause() : c.play());
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   void _apply() {
@@ -213,6 +276,7 @@ class _ShortPageState extends ConsumerState<_ShortPage> {
   @override
   void dispose() {
     _c?.dispose();
+    _videoFocus.dispose();
     super.dispose();
   }
 
@@ -220,77 +284,82 @@ class _ShortPageState extends ConsumerState<_ShortPage> {
   Widget build(BuildContext context) {
     final c = _c;
     final info = _info;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (c != null)
-          GestureDetector(
-            onTap: () => setState(() => c.value.isPlaying ? c.pause() : c.play()),
-            child: FittedBox(
-              fit: c.value.aspectRatio < 0.7 ? BoxFit.cover : BoxFit.contain,
-              child: SizedBox(width: c.value.size.width, height: c.value.size.height, child: VideoPlayer(c)),
-            ),
-          )
-        else
-          Stack(
-            fit: StackFit.expand,
-            children: [
-              YtImage('https://i.ytimg.com/vi/${widget.videoId}/oar2.jpg', fit: BoxFit.cover),
-              Center(
-                child: _error != null
-                    ? Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                        child: Text(
-                          _error is VideoUnavailable
-                              ? (_error as VideoUnavailable).friendly
-                              : 'Couldn\'t load this Short',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      )
-                    : const CircularProgressIndicator(color: Colors.white),
+    return Focus(
+      focusNode: _videoFocus,
+      autofocus: widget.playing && DeviceInfo.current.tv,
+      onKeyEvent: _onKey,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (c != null)
+            GestureDetector(
+              onTap: () => setState(() => c.value.isPlaying ? c.pause() : c.play()),
+              child: FittedBox(
+                fit: c.value.aspectRatio < 0.7 ? BoxFit.cover : BoxFit.contain,
+                child: SizedBox(width: c.value.size.width, height: c.value.size.height, child: VideoPlayer(c)),
               ),
-            ],
-          ),
-        if (c != null && !c.value.isPlaying && widget.playing)
+            )
+          else
+            Stack(
+              fit: StackFit.expand,
+              children: [
+                YtImage('https://i.ytimg.com/vi/${widget.videoId}/oar2.jpg', fit: BoxFit.cover),
+                Center(
+                  child: _error != null
+                      ? Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 32),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                          child: Text(
+                            _error is VideoUnavailable
+                                ? (_error as VideoUnavailable).friendly
+                                : 'Couldn\'t load this Short',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        )
+                      : const CircularProgressIndicator(color: Colors.white),
+                ),
+              ],
+            ),
+          if (c != null && !c.value.isPlaying && widget.playing)
+            const IgnorePointer(
+              child: Center(child: Icon(Symbols.play_arrow, size: 72, fill: 1, color: Colors.white70)),
+            ),
+          // Bottom shade so the text stays readable.
           const IgnorePointer(
-            child: Center(child: Icon(Symbols.play_arrow, size: 72, fill: 1, color: Colors.white70)),
-          ),
-        // Bottom shade so the text stays readable.
-        const IgnorePointer(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment(0, 0.3),
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Color(0x99000000)],
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment(0, 0.3),
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0x99000000)],
+                ),
               ),
             ),
           ),
-        ),
-        if (info != null) ...[
-          Positioned(
-            right: 4,
-            bottom: 72,
-            child: _Rail(info: info, item: _asItem(info)),
-          ),
-          Positioned(left: 12, right: 72, bottom: 20, child: _Meta(info: info)),
-        ],
-        if (c != null)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: VideoProgressIndicator(
-              c,
-              allowScrubbing: true,
-              padding: EdgeInsets.zero,
-              colors: const VideoProgressColors(playedColor: Colors.white, backgroundColor: Colors.white24),
+          if (info != null) ...[
+            Positioned(
+              right: 4,
+              bottom: 72,
+              child: _Rail(info: info, item: _asItem(info)),
             ),
-          ),
-      ],
+            Positioned(left: 12, right: 72, bottom: 20, child: _Meta(info: info)),
+          ],
+          if (c != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: VideoProgressIndicator(
+                c,
+                allowScrubbing: true,
+                padding: EdgeInsets.zero,
+                colors: const VideoProgressColors(playedColor: Colors.white, backgroundColor: Colors.white24),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -308,22 +377,26 @@ class _Rail extends ConsumerWidget {
     final likes = info.likeCount >= 0 ? info.likeCount : votes?.likes;
     Widget action(IconData icon, String label, VoidCallback onTap, {bool filled = true}) => Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
-              child: Icon(icon, color: Colors.white, fill: filled ? 1 : 0, size: 26),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
-            ),
-          ],
+      child: FocusHighlight(
+        radius: 24,
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Column(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
+                child: Icon(icon, color: Colors.white, fill: filled ? 1 : 0, size: 26),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -366,7 +439,8 @@ class _Meta extends ConsumerWidget {
       children: [
         Row(
           children: [
-            GestureDetector(
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
               onTap: id == null ? null : () => openChannel(context, ref, id),
               child: Row(
                 children: [
@@ -386,13 +460,17 @@ class _Meta extends ConsumerWidget {
             ),
             const SizedBox(width: 10),
             if (id != null)
-              GestureDetector(
-                onTap: () => ref
-                    .read(libraryProvider)
-                    .setSubscribed(
-                      ChannelItem(id: id, name: info.channelName, avatar: info.channelAvatar),
-                      !subscribed,
-                    ),
+              InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () async {
+                  if (subscribed && !await confirmUnsubscribe(context, info.channelName)) return;
+                  await ref
+                      .read(libraryProvider)
+                      .setSubscribed(
+                        ChannelItem(id: id, name: info.channelName, avatar: info.channelAvatar),
+                        !subscribed,
+                      );
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(

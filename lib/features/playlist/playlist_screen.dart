@@ -183,59 +183,61 @@ class PlaylistScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Symbols.arrow_back)),
       ),
-      body: page.hasError
-          ? ErrorView(error: page.error!, onRetry: () => ref.invalidate(playlistProvider(playlistId)))
-          : p == null
-          ? const LoadingView()
-          : LoadMoreListener(
-              onLoadMore: () => ref.read(playlistVideosProvider(playlistId).notifier).loadMore(),
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: PlaylistHeader(
-                      title: p.title,
-                      thumbnail: p.thumbnail,
-                      owner: p.owner,
-                      onOwner: p.ownerId == null ? null : () => openChannel(context, ref, p.ownerId!),
-                      meta: p.metadata,
-                      onPlayAll: items.isEmpty ? null : play,
-                      onShuffle: items.isEmpty ? null : () => play(shuffle: true),
-                      actions: [
-                        _RoundAction(
-                          icon: Symbols.library_add,
-                          filled: saved,
-                          onTap: () async {
-                            await ref.read(libraryProvider).setPlaylistSaved(p.asItem, !saved);
-                            if (context.mounted) {
-                              showSnack(context, saved ? 'Removed from library' : 'Saved to library');
-                            }
-                          },
-                        ),
-                        _RoundAction(
-                          icon: Symbols.share,
-                          onTap: () => SharePlus.instance.share(
-                            ShareParams(text: 'https://www.youtube.com/playlist?list=$playlistId'),
+      body: MaxContentWidth(
+        child: page.hasError
+            ? ErrorView(error: page.error!, onRetry: () => ref.invalidate(playlistProvider(playlistId)))
+            : p == null
+            ? const LoadingView()
+            : LoadMoreListener(
+                onLoadMore: () => ref.read(playlistVideosProvider(playlistId).notifier).loadMore(),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: PlaylistHeader(
+                        title: p.title,
+                        thumbnail: p.thumbnail,
+                        owner: p.owner,
+                        onOwner: p.ownerId == null ? null : () => openChannel(context, ref, p.ownerId!),
+                        meta: p.metadata,
+                        onPlayAll: items.isEmpty ? null : play,
+                        onShuffle: items.isEmpty ? null : () => play(shuffle: true),
+                        actions: [
+                          _RoundAction(
+                            icon: Symbols.library_add,
+                            filled: saved,
+                            onTap: () async {
+                              await ref.read(libraryProvider).setPlaylistSaved(p.asItem, !saved);
+                              if (context.mounted) {
+                                showSnack(context, saved ? 'Removed from library' : 'Saved to library');
+                              }
+                            },
                           ),
-                        ),
-                      ],
+                          _RoundAction(
+                            icon: Symbols.share,
+                            onTap: () => SharePlus.instance.share(
+                              ShareParams(text: 'https://www.youtube.com/playlist?list=$playlistId'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SliverList.builder(
-                    itemCount: items.length,
-                    itemBuilder: (context, i) => VideoRow(
-                      items[i],
-                      onTap: () => playVideo(context, ref, items[i], queue: items, index: i),
+                    SliverList.builder(
+                      itemCount: items.length,
+                      itemBuilder: (context, i) => VideoRow(
+                        items[i],
+                        onTap: () => playVideo(context, ref, items[i], queue: items, index: i),
+                      ),
                     ),
-                  ),
-                  if (videos.isLoading || (videos.value?.loadingMore ?? false))
-                    const SliverToBoxAdapter(
-                      child: Padding(padding: EdgeInsets.all(24), child: LoadingView()),
-                    ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                  const SliverBottomInset(),
-                ],
+                    if (videos.isLoading || (videos.value?.loadingMore ?? false))
+                      const SliverToBoxAdapter(
+                        child: Padding(padding: EdgeInsets.all(24), child: LoadingView()),
+                      ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    const SliverBottomInset(),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }
@@ -299,55 +301,60 @@ class LocalPlaylistScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: PlaylistHeader(
-              title: title,
-              thumbnail: videos.firstOrNull?.thumbnailOrDefault,
-              icon: isLiked ? Symbols.thumb_up : Symbols.schedule,
-              meta: [if (userMade) 'Private' else 'Playlist', '${videos.length} video${videos.length == 1 ? '' : 's'}'],
-              onPlayAll: videos.isEmpty ? null : () => _playList(context, ref, videos),
-              onShuffle: videos.isEmpty ? null : () => _playList(context, ref, videos, shuffle: true),
-            ),
-          ),
-          if (videos.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: EmptyView(
-                icon: isLiked ? Symbols.thumb_up : Symbols.video_library,
-                title: 'No videos in this playlist yet',
-                message: isLiked ? 'Videos you like will show up here' : 'Save videos from their ⋮ menu',
+      body: MaxContentWidth(
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: PlaylistHeader(
+                title: title,
+                thumbnail: videos.firstOrNull?.thumbnailOrDefault,
+                icon: isLiked ? Symbols.thumb_up : Symbols.schedule,
+                meta: [
+                  if (userMade) 'Private' else 'Playlist',
+                  '${videos.length} video${videos.length == 1 ? '' : 's'}',
+                ],
+                onPlayAll: videos.isEmpty ? null : () => _playList(context, ref, videos),
+                onShuffle: videos.isEmpty ? null : () => _playList(context, ref, videos, shuffle: true),
               ),
-            )
-          else if (userMade || playlist?.isWatchLater == true)
-            SliverReorderableList(
-              itemCount: videos.length,
-              onReorderItem: (from, to) => lib.movePlaylistItem(id, from, to),
-              itemBuilder: (context, i) => ReorderableDelayedDragStartListener(
-                key: ValueKey(videos[i].id),
-                index: i,
-                child: VideoRow(
+            ),
+            if (videos.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: EmptyView(
+                  icon: isLiked ? Symbols.thumb_up : Symbols.video_library,
+                  title: 'No videos in this playlist yet',
+                  message: isLiked ? 'Videos you like will show up here' : 'Save videos from their ⋮ menu',
+                ),
+              )
+            else if (userMade || playlist?.isWatchLater == true)
+              SliverReorderableList(
+                itemCount: videos.length,
+                onReorderItem: (from, to) => lib.movePlaylistItem(id, from, to),
+                itemBuilder: (context, i) => ReorderableDelayedDragStartListener(
+                  key: ValueKey(videos[i].id),
+                  index: i,
+                  child: VideoRow(
+                    videos[i],
+                    onTap: () => playVideo(context, ref, videos[i], queue: videos, index: i),
+                    onRemove: () => remove(videos[i]),
+                    removeLabel: 'Remove from $title',
+                  ),
+                ),
+              )
+            else
+              SliverList.builder(
+                itemCount: videos.length,
+                itemBuilder: (context, i) => VideoRow(
                   videos[i],
                   onTap: () => playVideo(context, ref, videos[i], queue: videos, index: i),
                   onRemove: () => remove(videos[i]),
                   removeLabel: 'Remove from $title',
                 ),
               ),
-            )
-          else
-            SliverList.builder(
-              itemCount: videos.length,
-              itemBuilder: (context, i) => VideoRow(
-                videos[i],
-                onTap: () => playVideo(context, ref, videos[i], queue: videos, index: i),
-                onRemove: () => remove(videos[i]),
-                removeLabel: 'Remove from $title',
-              ),
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          const SliverBottomInset(),
-        ],
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverBottomInset(),
+          ],
+        ),
       ),
     );
   }

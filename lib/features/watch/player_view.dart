@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:video_player/video_player.dart';
@@ -8,7 +9,9 @@ import 'package:video_player/video_player.dart';
 import '../../data/video_info.dart';
 import '../../innertube/models.dart';
 import '../../providers.dart';
+import '../../ui/layout.dart';
 import '../../ui/theme/yt_theme.dart';
+import '../../ui/widgets/common.dart';
 import '../../util/format.dart';
 import 'player_settings.dart';
 import 'seek_bar.dart';
@@ -72,6 +75,10 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
   Timer? _seekReset;
   bool _boost = false;
 
+  /// The player itself, focused while its controls are hidden (TV remote, keyboards); see [_onKey].
+  final _playerFocus = FocusNode(debugLabel: 'player');
+  final _playPauseFocus = FocusNode(debugLabel: 'play/pause');
+
   @override
   void initState() {
     super.initState();
@@ -82,6 +89,8 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
   void dispose() {
     _hide?.cancel();
     _seekReset?.cancel();
+    _playerFocus.dispose();
+    _playPauseFocus.dispose();
     super.dispose();
   }
 
@@ -89,8 +98,70 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
     _hide?.cancel();
     _hide = Timer(const Duration(seconds: 3), () {
       final c = ref.read(playerControllerProvider);
-      if (mounted && (c?.value.isPlaying ?? false)) setState(() => _visible = false);
+      if (!mounted || !(c?.value.isPlaying ?? false)) return;
+      // A control with focus is about to be hidden: give focus back to the player, so the remote keeps working.
+      final inControls = _playerFocus.hasFocus && !_playerFocus.hasPrimaryFocus;
+      setState(() => _visible = false);
+      if (inControls) _playerFocus.requestFocus();
     });
+  }
+
+  /// Shows the controls with play/pause focused (once they're focusable again, after this frame).
+  void _showControls() {
+    setState(() => _visible = true);
+    _scheduleHide();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _playPauseFocus.requestFocus();
+    });
+  }
+
+  void _togglePlay() {
+    final c = ref.read(playerControllerProvider);
+    if (c == null) return;
+    final v = c.value;
+    if (v.isCompleted) {
+      c.seekTo(Duration.zero);
+      c.play();
+    } else {
+      v.isPlaying ? c.pause() : c.play();
+    }
+    _scheduleHide();
+  }
+
+  /// The remote and keyboards (docs/ui.md). Media keys always work. While the player itself has focus (controls
+  /// hidden): Select shows the controls, Left/Right seek 10 s, Up (and Down in fullscreen) show the controls; Down
+  /// on the watch page moves on to the details. While a control has focus, any key keeps the controls up.
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (e is KeyUpEvent) return KeyEventResult.ignored;
+    final key = e.logicalKey;
+    final c = ref.read(playerControllerProvider);
+    if (key == LogicalKeyboardKey.mediaPlayPause) {
+      _togglePlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPlay || key == LogicalKeyboardKey.mediaPause) {
+      key == LogicalKeyboardKey.mediaPlay ? c?.play() : c?.pause();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaFastForward || key == LogicalKeyboardKey.mediaRewind) {
+      _seekStep(key == LogicalKeyboardKey.mediaFastForward ? 1 : -1);
+      return KeyEventResult.handled;
+    }
+    if (!node.hasPrimaryFocus) {
+      if (_visible) _scheduleHide();
+      return KeyEventResult.ignored;
+    }
+    final select =
+        key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.gameButtonA;
+    if (select || key == LogicalKeyboardKey.arrowUp || (key == LogicalKeyboardKey.arrowDown && widget.fullscreen)) {
+      _showControls();
+      return KeyEventResult.handled;
+    }
+    if (!_visible && (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight)) {
+      _seekStep(key == LogicalKeyboardKey.arrowRight ? 1 : -1);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   void _toggle() {
@@ -98,10 +169,12 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
     if (_visible) _scheduleHide();
   }
 
-  void _doubleTap(TapDownDetails d, double width) {
+  void _doubleTap(TapDownDetails d, double width) => _seekStep(d.localPosition.dx < width / 2 ? -1 : 1);
+
+  /// Seeks 10 s back (-1) or forward (1), with YouTube's ripple counting up on repeats.
+  void _seekStep(int side) {
     final c = ref.read(playerControllerProvider);
     if (c == null) return;
-    final side = d.localPosition.dx < width / 2 ? -1 : 1;
     final seconds = side == _seekSide ? _seekSeconds + 10 : 10;
     setState(() {
       _seekSide = side;
@@ -122,71 +195,81 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
     }
     final c = ref.watch(playerControllerProvider);
     final error = ref.watch(playerErrorProvider);
-    return LayoutBuilder(
-      builder: (context, box) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _toggle,
-        onDoubleTapDown: (d) => _doubleTap(d, box.maxWidth),
-        onDoubleTap: () {},
-        // Hold for 2x speed, like YouTube.
-        onLongPressStart: (_) {
-          final v = c?.value;
-          if (v == null || !v.isPlaying) return;
-          setState(() => _boost = true);
-          c!.setPlaybackSpeed(2);
-        },
-        onLongPressEnd: (_) {
-          if (!_boost) return;
-          setState(() => _boost = false);
-          c?.setPlaybackSpeed(1);
-        },
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const VideoSurface(),
-            if (c != null && c.value.isInitialized)
-              CaptionOverlay(controller: c, bottom: _visible ? (widget.fullscreen ? 72 : 48) : 12),
-            if (error != null)
-              _ErrorOverlay(error: error)
-            else if (c == null || !c.value.isInitialized)
-              const Center(
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
-                ),
-              ),
-            if (c != null && c.value.isInitialized)
-              ValueListenableBuilder<VideoPlayerValue>(
-                valueListenable: c,
-                builder: (context, v, _) => Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (v.isBuffering && !_visible)
-                      const Center(child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white)),
-                    AnimatedOpacity(
-                      opacity: _visible ? 1 : 0,
-                      duration: const Duration(milliseconds: 200),
-                      child: IgnorePointer(ignoring: !_visible, child: _controls(c, v)),
-                    ),
-                    if (!_visible && !widget.fullscreen)
-                      Positioned(left: 0, right: 0, bottom: 0, child: SeekBar(controller: c, minimal: true)),
-                  ],
-                ),
-              ),
-            if (_seekSide != 0) _SeekRipple(side: _seekSide, seconds: _seekSeconds),
-            if (_boost)
-              const Positioned(
-                top: 12,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: _Pill(
-                    child: Text('2x  ▶▶', style: TextStyle(color: Colors.white)),
+    return Focus(
+      focusNode: _playerFocus,
+      // On a TV (and in fullscreen) the player takes focus, so the remote controls it straight away.
+      autofocus: widget.fullscreen || DeviceInfo.current.tv,
+      onKeyEvent: _onKey,
+      child: LayoutBuilder(
+        builder: (context, box) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _toggle,
+          onDoubleTapDown: (d) => _doubleTap(d, box.maxWidth),
+          onDoubleTap: () {},
+          // Hold for 2x speed, like YouTube.
+          onLongPressStart: (_) {
+            final v = c?.value;
+            if (v == null || !v.isPlaying) return;
+            setState(() => _boost = true);
+            c!.setPlaybackSpeed(2);
+          },
+          onLongPressEnd: (_) {
+            if (!_boost) return;
+            setState(() => _boost = false);
+            c?.setPlaybackSpeed(1);
+          },
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const VideoSurface(),
+              if (c != null && c.value.isInitialized)
+                CaptionOverlay(controller: c, bottom: _visible ? (widget.fullscreen ? 72 : 48) : 12),
+              if (error != null)
+                _ErrorOverlay(error: error)
+              else if (c == null || !c.value.isInitialized)
+                const Center(
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
                   ),
                 ),
-              ),
-          ],
+              if (c != null && c.value.isInitialized)
+                ValueListenableBuilder<VideoPlayerValue>(
+                  valueListenable: c,
+                  builder: (context, v, _) => Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (v.isBuffering && !_visible)
+                        const Center(child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white)),
+                      AnimatedOpacity(
+                        opacity: _visible ? 1 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        // Hidden controls take neither taps nor focus.
+                        child: IgnorePointer(
+                          ignoring: !_visible,
+                          child: ExcludeFocus(excluding: !_visible, child: _controls(c, v)),
+                        ),
+                      ),
+                      if (!_visible && !widget.fullscreen)
+                        Positioned(left: 0, right: 0, bottom: 0, child: SeekBar(controller: c, minimal: true)),
+                    ],
+                  ),
+                ),
+              if (_seekSide != 0) _SeekRipple(side: _seekSide, seconds: _seekSeconds),
+              if (_boost)
+                const Positioned(
+                  top: 12,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _Pill(
+                      child: Text('2x  ▶▶', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -245,29 +328,29 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
                 children: [
                   _IconBtn(Symbols.skip_previous, size: 36, filled: true, onTap: playback.previous),
                   const SizedBox(width: 40),
-                  GestureDetector(
-                    onTap: () {
-                      if (v.isCompleted) {
-                        c.seekTo(Duration.zero);
-                        c.play();
-                      } else {
-                        v.isPlaying ? c.pause() : c.play();
-                      }
-                      _scheduleHide();
-                    },
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), shape: BoxShape.circle),
-                      child: Icon(
-                        v.isCompleted
-                            ? Symbols.replay
-                            : v.isPlaying
-                            ? Symbols.pause
-                            : Symbols.play_arrow,
-                        size: 44,
-                        fill: 1,
-                        color: Colors.white,
+                  FocusHighlight(
+                    radius: 30,
+                    child: Material(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        focusNode: _playPauseFocus,
+                        onTap: _togglePlay,
+                        child: SizedBox(
+                          width: 60,
+                          height: 60,
+                          child: Icon(
+                            v.isCompleted
+                                ? Symbols.replay
+                                : v.isPlaying
+                                ? Symbols.pause
+                                : Symbols.play_arrow,
+                            size: 44,
+                            fill: 1,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),

@@ -42,59 +42,64 @@ class HomeScreen extends ConsumerWidget {
             onLoadMore: () => ref.read(homeProvider.notifier).loadMore(),
             child: Listener(
               onPointerDown: (_) => HomeController.touched = true,
-              child: CustomScrollView(
-                slivers: [
-                  YtTopBar(
-                    bottom: PreferredSize(
-                      preferredSize: const Size.fromHeight(YtSizes.chipHeight + 16),
-                      child: ChipBar(
-                        children: [
-                          for (final c in chips)
-                            YtChip(
-                              label: c.label,
-                              selected: c == chip,
-                              onTap: () => ref.read(homeChipProvider.notifier).select(c),
-                            ),
+              // The remote counts as touching Home too.
+              child: Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (_, _) {
+                  HomeController.touched = true;
+                  return KeyEventResult.ignored;
+                },
+                child: CustomScrollView(
+                  slivers: [
+                    YtTopBar(
+                      bottom: PreferredSize(
+                        preferredSize: const Size.fromHeight(YtSizes.chipHeight + 16),
+                        child: ChipBar(
+                          children: [
+                            for (final c in chips)
+                              YtChip(
+                                label: c.label,
+                                selected: c == chip,
+                                onTap: () => ref.read(homeChipProvider.notifier).select(c),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (chip == HomeChip.all && !hasHistory && !hasSubs && home.hasValue)
+                      const SliverToBoxAdapter(child: _StartCard()),
+                    if (home.isLoading && items.isEmpty)
+                      const SliverToBoxAdapter(child: FeedSkeleton())
+                    else if (home.hasError && items.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: ErrorView(error: home.error!, onRetry: () => ref.invalidate(homeProvider)),
+                      )
+                    else if (items.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: EmptyView(
+                          icon: Symbols.search,
+                          title: 'Try searching to get started',
+                          message: 'Start watching videos to help us build a feed of videos you\'ll love.',
+                          action: FilledButton(onPressed: () => openSearch(context, ref), child: const Text('Search')),
+                        ),
+                      )
+                    else
+                      SliverMainAxisGroup(
+                        slivers: [
+                          VideosWithShortsSliver(videos: items, shorts: shorts, phoneShelfAt: shelfAt),
+                          SliverToBoxAdapter(
+                            child: home.value?.loadingMore ?? false
+                                ? const Padding(padding: EdgeInsets.all(24), child: LoadingView())
+                                : const SizedBox(height: 24),
+                          ),
                         ],
                       ),
-                    ),
-                  ),
-                  if (chip == HomeChip.all && !hasHistory && !hasSubs && home.hasValue)
-                    const SliverToBoxAdapter(child: _StartCard()),
-                  if (home.isLoading && items.isEmpty)
-                    const SliverToBoxAdapter(child: FeedSkeleton())
-                  else if (home.hasError && items.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: ErrorView(error: home.error!, onRetry: () => ref.invalidate(homeProvider)),
-                    )
-                  else if (items.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: EmptyView(
-                        icon: Symbols.search,
-                        title: 'Try searching to get started',
-                        message: 'Start watching videos to help us build a feed of videos you\'ll love.',
-                        action: FilledButton(onPressed: () => openSearch(context, ref), child: const Text('Search')),
-                      ),
-                    )
-                  else
-                    SliverList.builder(
-                      itemCount: items.length + (shorts.isEmpty ? 0 : 1) + 1,
-                      itemBuilder: (context, i) {
-                        final withShelf = shorts.isNotEmpty;
-                        if (withShelf && i == shelfAt) return ShortsShelf(items: shorts);
-                        final index = withShelf && i > shelfAt ? i - 1 : i;
-                        if (index >= items.length) {
-                          return home.value?.loadingMore ?? false
-                              ? const Padding(padding: EdgeInsets.all(24), child: LoadingView())
-                              : const SizedBox(height: 24);
-                        }
-                        return VideoCard(items[index]);
-                      },
-                    ),
-                  const SliverBottomInset(),
-                ],
+                    const SliverBottomInset(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -119,7 +124,7 @@ class _StartCard extends ConsumerWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Your feed, on your phone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+        const Text('Your feed, on this device', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
         Text(
           'YouPipe builds Home from what you watch and the channels you subscribe to, all stored on this device. '
