@@ -20,9 +20,12 @@ enum WatchSheet { none, description, comments, queue }
 
 /// Everything under the player on the watch page.
 class WatchDetails extends ConsumerWidget {
-  const WatchDetails({super.key, required this.onSheet});
+  const WatchDetails({super.key, required this.onSheet, this.showRelated = true});
 
   final ValueChanged<WatchSheet> onSheet;
+
+  /// False on wide screens, where [RelatedList] has its own column next to the player.
+  final bool showRelated;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,43 +42,46 @@ class WatchDetails extends ConsumerWidget {
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: InkWell(
-              onTap: () => onSheet(WatchSheet.description),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      infoForThis?.title ?? video.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: YtText.watchTitle.copyWith(color: c.textPrimary),
-                    ),
-                    const SizedBox(height: 6),
-                    Text.rich(
-                      TextSpan(
-                        style: YtText.meta.copyWith(color: c.textSecondary),
-                        children: [
-                          TextSpan(
-                            text: [
-                              if (infoForThis != null && infoForThis.viewCount >= 0)
-                                infoForThis.isLive
-                                    ? '${compactCount(infoForThis.viewCount)} watching'
-                                    : viewsLabel(infoForThis.viewCount)
-                              else
-                                ?video.viewsText,
-                              ?relativeDate(infoForThis?.uploadDate) ?? video.publishedText,
-                            ].join('  '),
-                          ),
-                          TextSpan(
-                            text: '  ...more',
-                            style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w500),
-                          ),
-                        ],
+            child: FocusHighlight(
+              radius: 8,
+              child: InkWell(
+                onTap: () => onSheet(WatchSheet.description),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        infoForThis?.title ?? video.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: YtText.watchTitle.copyWith(color: c.textPrimary),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 6),
+                      Text.rich(
+                        TextSpan(
+                          style: YtText.meta.copyWith(color: c.textSecondary),
+                          children: [
+                            TextSpan(
+                              text: [
+                                if (infoForThis != null && infoForThis.viewCount >= 0)
+                                  infoForThis.isLive
+                                      ? '${compactCount(infoForThis.viewCount)} watching'
+                                      : viewsLabel(infoForThis.viewCount)
+                                else
+                                  ?video.viewsText,
+                                ?relativeDate(infoForThis?.uploadDate) ?? video.publishedText,
+                              ].join('  '),
+                            ),
+                            TextSpan(
+                              text: '  ...more',
+                              style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -93,24 +99,51 @@ class WatchDetails extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _QueueCard(now: now, onTap: () => onSheet(WatchSheet.queue)),
             ),
-          if (related.isLoading && relatedItems.isEmpty)
-            const SliverToBoxAdapter(
-              child: Padding(padding: EdgeInsets.only(top: 12), child: FeedSkeleton(count: 2)),
-            ),
-          SliverList.builder(
-            itemCount: relatedItems.length,
-            itemBuilder: (context, i) => switch (relatedItems[i]) {
-              final VideoItem v => VideoCard(v),
-              final ChannelItem ch => ChannelRow(ch),
-              final PlaylistItem p => PlaylistRow(p),
-            },
-          ),
+          if (showRelated) ..._relatedSlivers(related.isLoading, relatedItems, compact: false),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
     );
   }
 }
+
+/// The related videos as their own column, next to the player on wide screens (YouTube tablet's layout).
+class RelatedList extends ConsumerWidget {
+  const RelatedList({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(playbackProvider);
+    if (now == null) return const SizedBox.shrink();
+    final related = ref.watch(relatedProvider(now.video.id));
+    return LoadMoreListener(
+      onLoadMore: () => ref.read(relatedProvider(now.video.id).notifier).loadMore(),
+      child: CustomScrollView(
+        slivers: [
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          ..._relatedSlivers(related.isLoading, related.value?.items ?? const [], compact: true),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Related videos as cards (under the details) or as compact rows (in the side column).
+List<Widget> _relatedSlivers(bool loading, List<YtItem> items, {required bool compact}) => [
+  if (loading && items.isEmpty)
+    const SliverToBoxAdapter(
+      child: Padding(padding: EdgeInsets.only(top: 12), child: FeedSkeleton(count: 2)),
+    ),
+  SliverList.builder(
+    itemCount: items.length,
+    itemBuilder: (context, i) => switch (items[i]) {
+      final VideoItem v => compact ? VideoRow(v) : VideoCard(v),
+      final ChannelItem ch => ChannelRow(ch),
+      final PlaylistItem p => PlaylistRow(p),
+    },
+  ),
+];
 
 class _ChannelRow extends ConsumerWidget {
   const _ChannelRow({required this.video, required this.info});
@@ -124,24 +157,27 @@ class _ChannelRow extends ConsumerWidget {
     final name = info?.channelName ?? video.channelName ?? '';
     final avatar = info?.channelAvatar ?? video.channelAvatar;
     final subs = info?.subscriberCount ?? -1;
-    return InkWell(
-      onTap: id == null ? null : () => openChannel(context, ref, id),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-        child: Row(
-          children: [
-            Avatar(avatar, size: 36, name: name),
-            const SizedBox(width: 12),
-            Flexible(
-              child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: YtText.channelName),
-            ),
-            if (subs >= 0) ...[
-              const SizedBox(width: 8),
-              Text(compactCount(subs), style: YtText.meta.copyWith(color: context.yt.textSecondary)),
+    return FocusHighlight(
+      radius: 8,
+      child: InkWell(
+        onTap: id == null ? null : () => openChannel(context, ref, id),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          child: Row(
+            children: [
+              Avatar(avatar, size: 36, name: name),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: YtText.channelName),
+              ),
+              if (subs >= 0) ...[
+                const SizedBox(width: 8),
+                Text(compactCount(subs), style: YtText.meta.copyWith(color: context.yt.textSecondary)),
+              ],
+              const Spacer(),
+              if (id != null) SubscribeButton(ChannelItem(id: id, name: name, avatar: avatar)),
             ],
-            const Spacer(),
-            if (id != null) SubscribeButton(ChannelItem(id: id, name: name, avatar: avatar)),
-          ],
+          ),
         ),
       ),
     );
@@ -252,49 +288,52 @@ class _CommentsTeaser extends ConsumerWidget {
       child: Material(
         color: c.chip,
         borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(
-                        text: 'Comments',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      if (count != null)
-                        TextSpan(
-                          text: '  ${shortCount(count)}',
-                          style: TextStyle(color: c.textSecondary),
+        child: FocusHighlight(
+          radius: 12,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'Comments',
+                          style: TextStyle(fontWeight: FontWeight.w700),
                         ),
-                    ],
+                        if (count != null)
+                          TextSpan(
+                            text: '  ${shortCount(count)}',
+                            style: TextStyle(color: c.textSecondary),
+                          ),
+                      ],
+                    ),
+                    style: const TextStyle(fontSize: 14),
                   ),
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                if (first == null)
-                  Text('Loading comments…', style: TextStyle(color: c.textSecondary, fontSize: 13))
-                else
-                  Row(
-                    children: [
-                      Avatar(first.authorAvatar, size: 24, name: first.author.replaceFirst('@', '')),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          first.text,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 13),
+                  const SizedBox(height: 8),
+                  if (first == null)
+                    Text('Loading comments…', style: TextStyle(color: c.textSecondary, fontSize: 13))
+                  else
+                    Row(
+                      children: [
+                        Avatar(first.authorAvatar, size: 24, name: first.author.replaceFirst('@', '')),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            first.text,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-              ],
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -443,24 +482,27 @@ class DescriptionPanel extends ConsumerWidget {
                     separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (_, i) {
                       final ch = info.chapters[i];
-                      return InkWell(
-                        onTap: () {
-                          seek(ch.start);
-                          onClose();
-                        },
-                        child: SizedBox(
-                          width: 160,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              YtImage(ch.thumbnail, width: 160, height: 90, radius: 8),
-                              const SizedBox(height: 6),
-                              Text(ch.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: YtText.rowTitle),
-                              Text(
-                                formatDuration(ch.start),
-                                style: TextStyle(color: c.link, fontSize: 12, fontWeight: FontWeight.w500),
-                              ),
-                            ],
+                      return FocusHighlight(
+                        radius: 8,
+                        child: InkWell(
+                          onTap: () {
+                            seek(ch.start);
+                            onClose();
+                          },
+                          child: SizedBox(
+                            width: 160,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                YtImage(ch.thumbnail, width: 160, height: 90, radius: 8),
+                                const SizedBox(height: 6),
+                                Text(ch.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: YtText.rowTitle),
+                                Text(
+                                  formatDuration(ch.start),
+                                  style: TextStyle(color: c.link, fontSize: 12, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );

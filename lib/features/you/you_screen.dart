@@ -298,30 +298,32 @@ class HistoryScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: history.isEmpty
-          ? const EmptyView(
-              icon: Symbols.history,
-              title: 'Keep track of what you watch',
-              message: 'Watch history isn\'t viewable when empty.',
-            )
-          : ListView.builder(
-              itemCount: rows.length,
-              itemBuilder: (context, i) => switch (rows[i]) {
-                final String g => Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
-                  child: Text(g, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                ),
-                final HistoryEntry h => VideoRow(
-                  h.video,
-                  onRemove: () {
-                    unawaited(lib.removeFromHistory(h.video.id));
-                    showSnack(context, 'Removed from watch history');
-                  },
-                  removeLabel: 'Remove from watch history',
-                ),
-                _ => const SizedBox.shrink(),
-              },
-            ),
+      body: MaxContentWidth(
+        child: history.isEmpty
+            ? const EmptyView(
+                icon: Symbols.history,
+                title: 'Keep track of what you watch',
+                message: 'Watch history isn\'t viewable when empty.',
+              )
+            : ListView.builder(
+                itemCount: rows.length,
+                itemBuilder: (context, i) => switch (rows[i]) {
+                  final String g => Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+                    child: Text(g, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  ),
+                  final HistoryEntry h => VideoRow(
+                    h.video,
+                    onRemove: () {
+                      unawaited(lib.removeFromHistory(h.video.id));
+                      showSnack(context, 'Removed from watch history');
+                    },
+                    removeLabel: 'Remove from watch history',
+                  ),
+                  _ => const SizedBox.shrink(),
+                },
+              ),
+      ),
     );
   }
 }

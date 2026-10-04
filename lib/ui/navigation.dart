@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../innertube/models.dart';
 import '../providers.dart';
+import 'layout.dart';
 
 const branches = ['home', 'shorts', 'subscriptions', 'you'];
 
@@ -29,6 +30,8 @@ void playVideo(BuildContext context, WidgetRef ref, VideoItem video, {List<Video
     return;
   }
   ref.read(playerPanelProvider.notifier).expand();
+  // On a TV a picked video fills the screen, like YouTube for TV; Back shows the watch page.
+  if (DeviceInfo.current.tv) ref.read(fullscreenProvider.notifier).set(true);
   unawaited(ref.read(playbackProvider.notifier).play(video, queue: queue, index: index));
 }
 

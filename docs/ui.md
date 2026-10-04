@@ -60,9 +60,49 @@ Both themes follow the device setting by default (Settings → Appearance). Read
     - One keyed `GestureDetector` wraps the video at every size, so a drag survives the switch between the mini card, the morphing video and `PlayerView`.
     - The nav bar slides away as it expands. The status bar over the expanded player is black.
     - The mini player is hidden on the Shorts tab.
-  - **Fullscreen** switches to landscape and immersive mode.
+  - **Fullscreen** switches to landscape (phones and tablets; never on a TV) and immersive mode.
   - **PiP** shows only the video.
   - **Back order:** fullscreen → open panel (description/comments/queue) → expanded player → pages → Home → exit.
+  - **Android 16's predictive back** asks the app up front whether it will handle Back. The shell's `PopScope` claims it whenever fullscreen, the expanded player or another tab is showing; otherwise Back would close the app instead of reaching the `BackButtonListener` (found on the Android 16 TV emulator, 2026-10-04).
+
+## Tablets and TVs (`lib/ui/layout.dart`)
+
+- **Form factor:**
+  - TV comes from the platform: `youpipe/system` → `device` (television UI mode or the leanback feature; Fire TV too), read once in `main.dart` as `DeviceInfo.current`.
+  - Tablet means a shortest side of at least 600 dp; everything else is a phone.
+- **Orientation:** phones stay portrait (fullscreen turns to landscape), tablets rotate freely, TVs are left alone (`appOrientations`).
+- **Feed grids:**
+  - `feedColumns`: 1 below 600 dp, 2 below 900, 3 below 1200, then 4. TVs get a card per 220 dp (4 across at 1080p, next to the rail).
+  - `VideoGridSliver` lays videos out (on phones, today's full-width cards); `VideosWithShortsSliver` puts the Shorts shelf after the first grid row (Home, Subscriptions); `FeedSliver` turns search results and channel tabs into grids with Shorts, shelves and rows between (`feedRuns`).
+  - Grid cards (`VideoCard(grid: true)`) have rounded thumbnails decoded at their cell size.
+  - Channel and playlist rows in feeds, and row pages (playlist, history, downloads, settings, search suggestions, subscriptions), stay within 840 dp (`MaxContentWidth`).
+  - The Shorts grids use a max cell width, so phones keep 2 and 3 across.
+- **Wide screens** (`isWide`: landscape and at least 900 dp, so landscape tablets and TVs):
+  - A **side rail** (`_SideNav`, 72 dp) replaces the bottom bar and slides out as the player expands.
+  - The **watch page** has two columns: the video (64% of the width) with the details under it, and the related list as compact rows on the right. The Description, Comments and Queue panels open in the right column instead of over the details.
+  - **Shorts** play in a centred 9:16 column instead of a cropped band.
+- **The mini player** is capped at 360 dp wide.
+
+## The TV remote (and keyboards)
+
+- **Focus ring:** `FocusHighlight` draws a rounded ring just outside a widget while it or something inside it has focus, so it shows on any colour (a white chip too). It's on cards, rows, chips, pills, nav items, Shorts buttons, the mini player, the watch page's title, channel, comments and chapters. Focused icon buttons get an outline from the theme (`iconButtonTheme`), and list rows a tint (`focusColor`).
+- **When it shows:** only after key input (`FocusHighlightMode.traditional`), so touch users never see it. TVs always show it (`FocusHighlightStrategy.alwaysTraditional`).
+- **Starting focus:** on a TV the rail's selected item takes focus whenever no widget has it (at launch, on a tab change, after the watch page closes).
+- **Reaching the rail:** each tab's pages are their own focus scope, which arrow keys don't leave, so the shell turns a Left that can't move any further into focusing the rail (`_leftToRail`).
+- **Under the watch page** the tabs and the rail are excluded from focus, so the remote can't move behind it.
+- **Player** (`PlayerView._onKey`):
+  - With the controls hidden, the player itself has focus. Select shows the controls with play/pause focused; Left/Right seek 10 s (with the ripple); Up shows the controls; Down moves on to the details (or shows the controls in fullscreen).
+  - Media keys (play/pause, play, pause, fast-forward, rewind) always work.
+  - Hidden controls are excluded from focus; when they hide, focus goes back to the player.
+  - The seek bar takes focus: Left/Right move the storyboard preview 10 s, releasing the key seeks.
+- **On a TV, a picked video opens fullscreen**, like YouTube for TV; Back shows the watch page, Back again the mini player.
+- **Shorts:** Up/Down change Short and Select pauses while the video has focus; Left reaches the side buttons (or the rail); the buttons, channel and Subscribe are focusable.
+- **Not on a TV:** Cast (the TV is the big screen) and PiP (most TVs and Fire TV have none; `MainActivity` won't arm it without the feature).
+- **Known gaps:**
+  - links inside descriptions and comments stay touch-only;
+  - the small history and shelf cards have no ⋮ (their rows are too short), so their menu is long-press only; the video's own page has the same actions;
+  - there's no pull-to-refresh with a remote (Home refreshes at launch);
+  - playlists can't be reordered with a remote.
 - **Home:**
   - The top bar floats: wordmark, Cast, search. Once it has floated away, `StatusBarScrim` keeps the status bar strip filled with the page background (Home, Subscriptions, You), so the feed doesn't scroll visibly under the clock.
   - A floating chip bar.

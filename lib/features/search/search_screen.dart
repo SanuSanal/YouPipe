@@ -58,39 +58,41 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         title: SearchField(controller: _text, onChanged: (_) => setState(() {}), onSubmitted: _submit),
         actions: const [SizedBox(width: 12)],
       ),
-      body: ListView.builder(
-        itemCount: rows.length,
-        itemBuilder: (context, i) {
-          final (text, isHistory) = rows[i];
-          return ListTile(
-            leading: Icon(isHistory ? Symbols.history : Symbols.search, weight: 300),
-            title: Text(text, style: const TextStyle(fontSize: 15)),
-            trailing: IconButton(
-              onPressed: () => setState(() {
-                _text.text = '$text ';
-                _text.selection = TextSelection.collapsed(offset: _text.text.length);
-              }),
-              icon: const Icon(Symbols.north_west, weight: 300),
-            ),
-            onTap: () => _submit(text),
-            onLongPress: isHistory
-                ? () async {
-                    final remove = await showDialog<bool>(
-                      context: context,
-                      builder: (d) => AlertDialog(
-                        title: Text(text),
-                        content: const Text('Remove from search history?'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
-                          TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Remove')),
-                        ],
-                      ),
-                    );
-                    if (remove == true) await ref.read(libraryProvider).removeSearch(text);
-                  }
-                : null,
-          );
-        },
+      body: MaxContentWidth(
+        child: ListView.builder(
+          itemCount: rows.length,
+          itemBuilder: (context, i) {
+            final (text, isHistory) = rows[i];
+            return ListTile(
+              leading: Icon(isHistory ? Symbols.history : Symbols.search, weight: 300),
+              title: Text(text, style: const TextStyle(fontSize: 15)),
+              trailing: IconButton(
+                onPressed: () => setState(() {
+                  _text.text = '$text ';
+                  _text.selection = TextSelection.collapsed(offset: _text.text.length);
+                }),
+                icon: const Icon(Symbols.north_west, weight: 300),
+              ),
+              onTap: () => _submit(text),
+              onLongPress: isHistory
+                  ? () async {
+                      final remove = await showDialog<bool>(
+                        context: context,
+                        builder: (d) => AlertDialog(
+                          title: Text(text),
+                          content: const Text('Remove from search history?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+                            TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Remove')),
+                          ],
+                        ),
+                      );
+                      if (remove == true) await ref.read(libraryProvider).removeSearch(text);
+                    }
+                  : null,
+            );
+          },
+        ),
       ),
     );
   }
@@ -188,13 +190,15 @@ class ResultsScreen extends ConsumerWidget {
                 ),
               )
             else
-              SliverList.builder(
-                itemCount: entries.length + 1,
-                itemBuilder: (context, i) => i == entries.length
-                    ? (results.value?.loadingMore ?? false
-                          ? const Padding(padding: EdgeInsets.all(24), child: LoadingView())
-                          : const SizedBox(height: 24))
-                    : FeedEntryView(entries[i]),
+              SliverMainAxisGroup(
+                slivers: [
+                  FeedSliver(entries),
+                  SliverToBoxAdapter(
+                    child: results.value?.loadingMore ?? false
+                        ? const Padding(padding: EdgeInsets.all(24), child: LoadingView())
+                        : const SizedBox(height: 24),
+                  ),
+                ],
               ),
             const SliverBottomInset(),
           ],

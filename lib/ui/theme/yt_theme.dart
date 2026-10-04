@@ -99,6 +99,15 @@ abstract final class YtSizes {
   /// The floating mini player: a 16:9 card this fraction of the screen width, above the nav bar.
   static const miniPlayerWidthFraction = 0.55;
   static const miniPlayerMargin = 8.0;
+
+  /// The mini player never grows past this on tablets and TVs.
+  static const miniPlayerMaxWidth = 360.0;
+
+  /// The left navigation rail on wide screens (landscape tablets, TVs).
+  static const navRailWidth = 72.0;
+
+  /// The watch page's video column on wide screens; the related list takes the rest.
+  static const watchColumnFraction = 0.64;
   static const miniPlayerRadius = 12.0;
   static const chipHeight = 32.0;
   static const chipRadius = 8.0;
@@ -179,6 +188,16 @@ ThemeData buildYtTheme(Brightness brightness) {
     textTheme: text,
     splashFactory: InkRipple.splashFactory,
     highlightColor: c.divider,
+    // List rows, menus and settings show where the TV remote's focus is (cards use FocusHighlight).
+    focusColor: c.textPrimary.withValues(alpha: 0.22),
+    // Icon buttons (search, ⋮, player controls) get the same ring as cards when the remote focuses them.
+    iconButtonTheme: IconButtonThemeData(
+      style: ButtonStyle(
+        side: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.focused) ? BorderSide(color: c.textPrimary, width: 2.5) : null,
+        ),
+      ),
+    ),
     appBarTheme: AppBarTheme(
       backgroundColor: c.background,
       foregroundColor: c.textPrimary,

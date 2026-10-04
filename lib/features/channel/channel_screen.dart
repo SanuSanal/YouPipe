@@ -114,7 +114,7 @@ class _Header extends ConsumerWidget {
           ),
           if (page.description?.isNotEmpty == true) ...[
             const SizedBox(height: 12),
-            GestureDetector(
+            InkWell(
               onTap: () => showModalBottomSheet<void>(
                 context: context,
                 useRootNavigator: true,
@@ -230,8 +230,9 @@ class _TabContentState extends ConsumerState<_TabContent> with AutomaticKeepAliv
       body = SliverPadding(
         padding: const EdgeInsets.all(4),
         sliver: SliverGrid.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
+          // 3 across on phones, more on tablets and TVs.
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 150,
             childAspectRatio: 9 / 16,
             mainAxisSpacing: 4,
             crossAxisSpacing: 4,
@@ -244,7 +245,7 @@ class _TabContentState extends ConsumerState<_TabContent> with AutomaticKeepAliv
         ),
       );
     } else {
-      body = SliverList.builder(itemCount: entries.length, itemBuilder: (context, i) => FeedEntryView(entries[i]));
+      body = FeedSliver(entries);
     }
 
     return LoadMoreListener(

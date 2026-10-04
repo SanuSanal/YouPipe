@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../layout.dart';
 import '../theme/yt_theme.dart';
 
 /// A network image sized to its box (decoded at the box's pixel size), with YouTube's grey placeholder.
@@ -160,25 +161,28 @@ class YtChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.yt;
     final fg = selected ? c.onChipSelected : c.textPrimary;
-    return Material(
-      color: selected ? c.chipSelected : c.chip,
-      borderRadius: BorderRadius.circular(YtSizes.chipRadius),
-      child: InkWell(
+    return FocusHighlight(
+      radius: YtSizes.chipRadius,
+      child: Material(
+        color: selected ? c.chipSelected : c.chip,
         borderRadius: BorderRadius.circular(YtSizes.chipRadius),
-        onTap: onTap,
-        child: Container(
-          height: YtSizes.chipHeight,
-          padding: EdgeInsets.symmetric(horizontal: icon != null && label.isEmpty ? 8 : 12),
-          // widthFactor 1: hug the label even under a bounded width (in a Wrap), instead of stretching.
-          child: Align(
-            widthFactor: 1,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) Icon(icon, size: 20, color: fg),
-                if (icon != null && label.isNotEmpty) const SizedBox(width: 6),
-                if (label.isNotEmpty) Text(label, style: YtText.chip.copyWith(color: fg)),
-              ],
+        child: InkWell(
+          borderRadius: BorderRadius.circular(YtSizes.chipRadius),
+          onTap: onTap,
+          child: Container(
+            height: YtSizes.chipHeight,
+            padding: EdgeInsets.symmetric(horizontal: icon != null && label.isEmpty ? 8 : 12),
+            // widthFactor 1: hug the label even under a bounded width (in a Wrap), instead of stretching.
+            child: Align(
+              widthFactor: 1,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) Icon(icon, size: 20, color: fg),
+                  if (icon != null && label.isNotEmpty) const SizedBox(width: 6),
+                  if (label.isNotEmpty) Text(label, style: YtText.chip.copyWith(color: fg)),
+                ],
+              ),
             ),
           ),
         ),
@@ -220,26 +224,29 @@ class PillButton extends StatelessWidget {
   final Widget? child;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: context.yt.chip,
-    shape: const StadiumBorder(),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: SizedBox(
-        height: YtSizes.pillHeight,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child:
-              child ??
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) Icon(icon, size: 20, fill: filledIcon ? 1 : 0),
-                  if (icon != null && label != null) const SizedBox(width: 6),
-                  if (label != null) Text(label!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                ],
-              ),
+  Widget build(BuildContext context) => FocusHighlight(
+    radius: 18,
+    child: Material(
+      color: context.yt.chip,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: YtSizes.pillHeight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child:
+                child ??
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) Icon(icon, size: 20, fill: filledIcon ? 1 : 0),
+                    if (icon != null && label != null) const SizedBox(width: 6),
+                    if (label != null) Text(label!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+          ),
         ),
       ),
     ),
@@ -405,6 +412,95 @@ class SliverBottomInset extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       SliverToBoxAdapter(child: SizedBox(height: MediaQuery.paddingOf(context).bottom));
+}
+
+/// Pages of rows (playlists, history, settings) stay a readable width on tablets and TVs, centred; on phones this
+/// changes nothing.
+class MaxContentWidth extends StatelessWidget {
+  const MaxContentWidth({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: maxRowContentWidth),
+      child: child,
+    ),
+  );
+}
+
+/// A focus ring for the TV remote and keyboards (docs/ui.md): a rounded border drawn over [child] while it, or a
+/// widget inside it, has focus. Hidden while the screen is being touched, so phones never show it.
+class FocusHighlight extends StatefulWidget {
+  const FocusHighlight({super.key, required this.child, this.radius = 12});
+
+  final Widget child;
+  final double radius;
+
+  @override
+  State<FocusHighlight> createState() => _FocusHighlightState();
+}
+
+class _FocusHighlightState extends State<FocusHighlight> {
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_modeChanged);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_modeChanged);
+    super.dispose();
+  }
+
+  void _modeChanged(FocusHighlightMode _) {
+    if (_focused && mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final show = _focused && FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (f) => setState(() => _focused = f),
+      child: CustomPaint(
+        foregroundPainter: _RingPainter(show: show, color: context.yt.textPrimary, radius: widget.radius),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// The focus ring, drawn just outside the widget with a small gap, so it shows on any colour (a white chip too).
+class _RingPainter extends CustomPainter {
+  const _RingPainter({required this.show, required this.color, required this.radius});
+
+  final bool show;
+  final Color color;
+  final double radius;
+
+  static const _gap = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!show) return;
+    final rect = (Offset.zero & size).inflate(_gap);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(radius + _gap)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.show != show || old.color != color || old.radius != radius;
 }
 
 class LoadMoreListener extends StatelessWidget {

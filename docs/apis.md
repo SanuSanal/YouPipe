@@ -74,4 +74,4 @@ Videos `EgIQAQ%3D%3D` · Shorts `EgIQCQ%3D%3D` · Channels `EgIQAg%3D%3D` · Pla
 | `youpipe/cast` (+ `youpipe/cast/events`) | `selectRoute`, `load`, `play`, `pause`, `seek`, `setVolume`, `disconnect`, `relayStart`, `relayUrl`, `relayStop` | `CastChannel.kt`, `CastProxy.kt` |
 | `youpipe/updater` | `appInfo()`, `install({path})`, `openUrl({url})` | `UpdateChannel.kt` |
 | `youpipe/pip` | `arm({enabled, width, height})`, `enter()`; from Kotlin: `changed(bool)` | `MainActivity.kt` |
-| `youpipe/system` | `requestNotifications()` | `SystemChannel.kt` |
+| `youpipe/system` | `requestNotifications()`; `device()` → `{tv, pip}` (television UI mode or leanback; the PiP feature), read once at startup (docs/ui.md) | `SystemChannel.kt` |

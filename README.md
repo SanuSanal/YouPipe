@@ -70,14 +70,28 @@ A free, ad-free YouTube client for Android, with background play, picture-in-pic
 **Cast**
 - Cast to smart TVs (DLNA) or a Chromecast / Google TV
 
+**Phones, tablets and TVs**
+- Tablets get YouTube's tablet layout: rotation, a grid of videos, a side rail, and the video next to related videos
+- Runs on **Android TV, Google TV and Fire TV** with the remote: it shows up on the TV home screen, the focus is always visible, and videos open fullscreen
+
 ---
 
 ## 📥 Download
 
-Grab the latest APK from the **[Releases page](https://github.com/SanuSanal/YouPipe/releases/latest)** and install it on your phone. After that, the app tells you when there's a new version and installs it for you.
+Grab the latest APK from the **[Releases page](https://github.com/SanuSanal/YouPipe/releases/latest)** and install it. After that, the app tells you when there's a new version and installs it for you.
+
+The same app runs on phones, tablets and TVs; pick the APK for the device's processor:
+
+| APK | For |
+|---|---|
+| `arm64-v8a` | Phones, tablets and most Android/Google TVs |
+| `armeabi-v7a` | Older 32-bit phones and Fire TV sticks |
+| `x86_64` | Emulators and Chromebooks |
 
 > [!NOTE]
 > YouPipe isn't on the Play Store. Android may ask you to allow installs from your browser or file manager the first time.
+>
+> **On a TV:** sideload the APK with a file manager or the Downloader app (on Fire TV, allow apps from unknown sources for it). YouPipe then appears on the TV's home screen.
 
 ---
 

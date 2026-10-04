@@ -13,6 +13,13 @@
    - `key.properties` and `*.jks` are git-ignored.
 5. **R8:** `android/app/proguard-rules.pro` keeps NewPipeExtractor and Rhino, which load classes by reflection, and the no-arg constructors of Room databases. WorkManager opens `WorkDatabase_Impl` by reflection; without that rule the release build crashed at launch in `InitializationProvider` (found 2026-10-03). **Always launch a release build on the phone before tagging**: debug builds don't run R8. Checked on 2026-10-03 (arm64 APK about 26 MB, cold start about 380 ms).
 
+## Android TV, Google TV and Fire TV
+
+- The same APKs install on TVs: the manifest makes leanback and the touchscreen optional, and `LEANBACK_LAUNCHER` plus `android:banner` (`res/drawable-xhdpi/tv_banner.png`, 320×180, drawn by `python tool/tv_banner.py`) put YouPipe on the TV home screen.
+- **Which APK:** most Android/Google TV boxes take `arm64-v8a`; many Fire TV sticks run 32-bit Android and need `armeabi-v7a`.
+- **Sideloading:** with a file manager or Downloader app, or `adb install` over Wi-Fi after enabling developer options.
+- Fire OS has no Google Play services; Cast is off on TVs anyway, and `CastChannel` already checks for Play services.
+
 ## In-app updates (`lib/features/update/`)
 
 - **On launch** (3 s after the shell appears, release builds only, unless turned off):

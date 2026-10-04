@@ -19,14 +19,22 @@ import 'innertube/innertube.dart';
 import 'player/video_player_service.dart';
 import 'providers.dart';
 import 'ui/messenger.dart';
+import 'ui/layout.dart';
 import 'ui/router.dart';
 import 'ui/theme/yt_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
-  // Portrait like YouTube; fullscreen switches to landscape.
-  unawaited(SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]));
+  // Phones stay portrait like YouTube (fullscreen switches to landscape); tablets rotate; TVs are left alone.
+  await DeviceInfo.load();
+  // A TV is driven by its remote: always show where focus is.
+  if (DeviceInfo.current.tv) FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
+  if (kDebugMode) {
+    // Where the remote's focus goes (adb logcat -s flutter:I | grep FOCUS).
+    FocusManager.instance.addListener(() => debugPrint('FOCUS ${FocusManager.instance.primaryFocus}'));
+  }
+  unawaited(SystemChrome.setPreferredOrientations(appOrientations(formFactorAtStartup())));
 
   final prefs = await SharedPreferences.getInstance();
   final innerTube = InnerTube(visitorData: prefs.getString('visitorData'));

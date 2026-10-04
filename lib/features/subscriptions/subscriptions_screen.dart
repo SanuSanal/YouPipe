@@ -105,8 +105,9 @@ class _SubscriptionsScreenState extends ConsumerState<SubscriptionsScreen> {
                   SliverPadding(
                     padding: const EdgeInsets.all(8),
                     sliver: SliverGrid.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                      // 2 across on phones, more on tablets and TVs.
+                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 220,
                         childAspectRatio: 9 / 16,
                         mainAxisSpacing: 8,
                         crossAxisSpacing: 8,
@@ -117,14 +118,7 @@ class _SubscriptionsScreenState extends ConsumerState<SubscriptionsScreen> {
                     ),
                   )
                 else
-                  SliverList.builder(
-                    itemCount: videos.length + (shorts.isEmpty ? 0 : 1),
-                    itemBuilder: (_, i) {
-                      if (shorts.isNotEmpty && i == 1) return ShortsShelf(items: shorts);
-                      final index = shorts.isNotEmpty && i > 1 ? i - 1 : i;
-                      return VideoCard(videos[index]);
-                    },
-                  ),
+                  VideosWithShortsSliver(videos: videos, shorts: shorts, phoneShelfAt: 1),
               ],
               const SliverBottomInset(),
             ],
@@ -198,17 +192,19 @@ class ChannelsScreen extends ConsumerWidget {
         leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Symbols.arrow_back)),
         actions: [for (final a in extraActions) a(context, ref)],
       ),
-      body: subs.isEmpty
-          ? const EmptyView(icon: Symbols.subscriptions, title: 'No subscriptions yet')
-          : ListView.builder(
-              itemCount: subs.length,
-              itemBuilder: (_, i) => ListTile(
-                leading: Avatar(subs[i].avatar, size: 40, name: subs[i].name),
-                title: Text(subs[i].name),
-                onTap: () => openChannel(context, ref, subs[i].id),
-                trailing: SubscribeButton(subs[i], compact: true),
+      body: MaxContentWidth(
+        child: subs.isEmpty
+            ? const EmptyView(icon: Symbols.subscriptions, title: 'No subscriptions yet')
+            : ListView.builder(
+                itemCount: subs.length,
+                itemBuilder: (_, i) => ListTile(
+                  leading: Avatar(subs[i].avatar, size: 40, name: subs[i].name),
+                  title: Text(subs[i].name),
+                  onTap: () => openChannel(context, ref, subs[i].id),
+                  trailing: SubscribeButton(subs[i], compact: true),
+                ),
               ),
-            ),
+      ),
     );
   }
 }

@@ -43,10 +43,11 @@
   - A toast with Undo appears.
   - The segments are coloured on the seek bar.
 - **PiP:**
-  - Armed while a video plays (if enabled), only when the play state or shape changes.
+  - Armed while a video plays (if enabled), only when the play state or shape changes. Never on devices without the PiP feature (most TVs, Fire TV): `SystemChannel.supportsPip`.
   - Android 12+ enters automatically on Home; older versions enter from `onUserLeaveHint`.
   - The shell then shows only the video.
-- **Fullscreen:** `fullscreenProvider`. The shell switches to landscape plus immersive mode and shows `PlayerView(fullscreen: true)`.
+- **Fullscreen:** `fullscreenProvider`. The shell switches to immersive mode (plus landscape on phones and tablets) and shows `PlayerView(fullscreen: true)`. On a TV a picked video starts fullscreen (`playVideo`).
+- **Remote and keyboard keys:** see docs/ui.md, "The TV remote".
 - **Background:**
   - `VideoPlayerOptions(allowBackgroundPlayback: true)` plus the audio_service foreground service.
   - Tested for 11 minutes screen-off in Phase 0.

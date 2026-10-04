@@ -31,7 +31,7 @@ class MainActivity : AudioServiceActivity() {
                 setMethodCallHandler { call, result ->
                     when (call.method) {
                         "arm" -> {
-                            pipArmed = call.argument<Boolean>("enabled") ?: false
+                            pipArmed = (call.argument<Boolean>("enabled") ?: false) && SystemChannel.supportsPip(this@MainActivity)
                             val w = call.argument<Int>("width") ?: 16
                             val h = call.argument<Int>("height") ?: 9
                             // Android rejects ratios outside 1:2.39..2.39:1.
@@ -66,6 +66,7 @@ class MainActivity : AudioServiceActivity() {
     }
 
     private fun applyParams() {
+        if (!SystemChannel.supportsPip(this)) return
         params()?.let { setPictureInPictureParams(it) }
     }
 
