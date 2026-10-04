@@ -16,11 +16,11 @@ void main() {
     expect(feedColumns(1208), 4);
   });
 
-  test('TVs fit a card per 220 dp (4 across at 1080p, next to the rail)', () {
+  test('TVs always show 4 cards across, whatever width in dp they report', () {
     DeviceInfo.current = const DeviceInfo(tv: true);
     expect(feedColumns(888), 4);
-    expect(feedColumns(400), 2);
-    expect(feedColumns(3000), 6);
+    expect(feedColumns(1368), 4);
+    expect(feedColumns(3000), 4);
   });
 
   test('wide (rail, two-column watch page) only in landscape from 900 dp', () {

@@ -527,6 +527,8 @@ void showSnack(BuildContext context, String message, {String? action, VoidCallba
     SnackBar(
       content: Text(message),
       duration: const Duration(seconds: 3),
+      // Close after [duration] even with an action (Flutter keeps a toast with an action up until it's tapped).
+      persist: false,
       action: action == null ? null : SnackBarAction(label: action, onPressed: onAction ?? () {}),
     ),
   );

@@ -39,7 +39,7 @@ One extraction per video, run on a 3-thread executor in `StreamExtractorChannel.
 
   Sending the ANDROID User-Agent with the manifest caused intermittent 403s, so each source now has its own User-Agent.
 - **Even with the right User-Agent, a VISIONOS DASH request occasionally gets a 403.** In Phase 0 that happened once in about 25 videos, and it didn't repeat for the same video.
-  - **Mitigation:** `VideoPlayerService` re-resolves once (`forceRefresh`) and resumes at the same position.
+  - **Mitigation:** `VideoPlayerService` re-resolves (`forceRefresh`) and resumes at the same position, up to 3 times in a row, and waits for the network if it's offline (docs/playback.md).
   - **Root cause not known yet.** If this happens more often, the next step is a local relay that fetches in 1 MB ranges, like YouPipe Music's `CastProxy.kt`.
 
 ## Caching and retries (`VideoInfoService`)

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart' show AppLifecycleState, ThemeMode, WidgetsBinding;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
@@ -182,6 +182,11 @@ class PlaybackController extends Notifier<NowPlaying?> {
   Timer? _saver;
   StreamSubscription<String>? _completions;
 
+  /// Keeps the current video's up-next fetched and alive. The mini player and the background show no related
+  /// list, and an unlistened autoDispose provider can be dropped before it answers (autoplay then never fired).
+  ProviderSubscription<Future<VideoItem?>>? _upNext;
+  String? _upNextId;
+
   @override
   NowPlaying? build() {
     _completions = _svc.completed.listen(_onCompleted);
@@ -194,9 +199,33 @@ class PlaybackController extends Notifier<NowPlaying?> {
     ref.onDispose(() {
       _saver?.cancel();
       _completions?.cancel();
+      _upNext?.close();
       _svc.info.removeListener(_enrich);
     });
     return null;
+  }
+
+  void _watchUpNext(String id) {
+    if (_upNextId == id && _upNext != null) return;
+    _upNext?.close();
+    _upNextId = id;
+    _upNext = ref.listen(upNextProvider(id).future, (_, _) {});
+  }
+
+  /// The video Autoplay plays after [id]; a failed fetch (often the network waking up) is tried once more.
+  Future<VideoItem?> _upNextOf(String id) async {
+    for (var attempt = 0; ; attempt++) {
+      _watchUpNext(id);
+      try {
+        return await _upNext!.read();
+      } on Object catch (e) {
+        debugPrint('YouPipe: up next for $id failed: $e');
+        if (attempt > 0) return null;
+        _upNext?.close();
+        _upNext = null;
+        ref.invalidate(upNextProvider(id));
+      }
+    }
   }
 
   /// Fills in what the card didn't know (channel avatar, duration…) once the video info arrives.
@@ -240,6 +269,8 @@ class PlaybackController extends Notifier<NowPlaying?> {
   }
 
   Future<void> _start(VideoItem video) async {
+    ref.read(upNextCountdownProvider.notifier).cancel();
+    _watchUpNext(video.id);
     final settings = ref.read(settingsProvider);
     final resume = settings.resume && !video.isLive ? await _library.resumePosition(video.id) : null;
     if (settings.saveHistory) await _library.recordWatch(video);
@@ -260,14 +291,31 @@ class PlaybackController extends Notifier<NowPlaying?> {
   Future<void> next({bool force = true}) async {
     final s = state;
     if (s == null) return;
+    ref.read(upNextCountdownProvider.notifier).cancel();
     if (s.hasNextInQueue) return _playAt(s.index + 1);
     if (!force && !ref.read(settingsProvider).autoplay) return;
-    final upNext = await ref.read(upNextProvider(s.video.id).future);
-    if (upNext != null && state?.video.id == s.video.id) {
-      await _savePosition();
-      state = s.copyWith(video: upNext, queue: [...s.queue, upNext], index: s.queue.length);
-      await _start(upNext);
+    final upNext = await _upNextOf(s.video.id);
+    if (upNext == null || state?.video.id != s.video.id) return;
+    // On the watch page YouTube counts down first, with Cancel; in the mini player, PiP or the background the next
+    // video just starts.
+    if (!force && _watching) {
+      ref.read(upNextCountdownProvider.notifier).start(upNext, () => _playUpNext(s, upNext));
+      return;
     }
+    await _playUpNext(s, upNext);
+  }
+
+  /// The watch page (or fullscreen) is on screen.
+  bool get _watching =>
+      (ref.read(playerPanelProvider) || ref.read(fullscreenProvider)) &&
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed &&
+      !Pip.instance.active.value;
+
+  Future<void> _playUpNext(NowPlaying s, VideoItem upNext) async {
+    if (state?.video.id != s.video.id) return;
+    await _savePosition();
+    state = s.copyWith(video: upNext, queue: [...s.queue, upNext], index: s.queue.length);
+    await _start(upNext);
   }
 
   /// Back to the start, or the previous video when within the first 5 s.
@@ -275,6 +323,7 @@ class PlaybackController extends Notifier<NowPlaying?> {
     final s = state;
     final c = _svc.controller.value;
     if (s == null) return;
+    ref.read(upNextCountdownProvider.notifier).cancel();
     if (c != null && c.value.position > const Duration(seconds: 5) || s.index == 0) {
       await c?.seekTo(Duration.zero);
       return;
@@ -320,8 +369,59 @@ class PlaybackController extends Notifier<NowPlaying?> {
 
   Future<void> stop() async {
     await _savePosition();
+    ref.read(upNextCountdownProvider.notifier).cancel();
+    _upNext?.close();
+    _upNext = null;
+    _upNextId = null;
     state = null;
     await _svc.stop();
+  }
+}
+
+/// YouTube's end-of-video "Up next" countdown on the watch page: the video, and when it starts.
+@immutable
+class UpNextCountdown {
+  const UpNextCountdown(this.video, this.startsAt);
+
+  final VideoItem video;
+  final DateTime startsAt;
+}
+
+final upNextCountdownProvider = NotifierProvider<UpNextCountdownController, UpNextCountdown?>(
+  UpNextCountdownController.new,
+);
+
+class UpNextCountdownController extends Notifier<UpNextCountdown?> {
+  static const length = Duration(seconds: 5);
+
+  Timer? _timer;
+  VoidCallback? _onDone;
+
+  @override
+  UpNextCountdown? build() {
+    ref.onDispose(() => _timer?.cancel());
+    return null;
+  }
+
+  void start(VideoItem video, VoidCallback onDone) {
+    _timer?.cancel();
+    _onDone = onDone;
+    state = UpNextCountdown(video, DateTime.now().add(length));
+    _timer = Timer(length, playNow);
+  }
+
+  /// Skips the rest of the countdown.
+  void playNow() {
+    final done = _onDone;
+    cancel();
+    done?.call();
+  }
+
+  void cancel() {
+    _timer?.cancel();
+    _timer = null;
+    _onDone = null;
+    if (state != null) state = null;
   }
 }
 

@@ -75,6 +75,10 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
   Timer? _seekReset;
   bool _boost = false;
 
+  /// A short message over the video ("Autoplay is on"), like YouTube's.
+  String? _flash;
+  Timer? _flashReset;
+
   /// The player itself, focused while its controls are hidden (TV remote, keyboards); see [_onKey].
   final _playerFocus = FocusNode(debugLabel: 'player');
   final _playPauseFocus = FocusNode(debugLabel: 'play/pause');
@@ -89,6 +93,7 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
   void dispose() {
     _hide?.cancel();
     _seekReset?.cancel();
+    _flashReset?.cancel();
     _playerFocus.dispose();
     _playPauseFocus.dispose();
     super.dispose();
@@ -120,6 +125,7 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
     if (c == null) return;
     final v = c.value;
     if (v.isCompleted) {
+      ref.read(upNextCountdownProvider.notifier).cancel();
       c.seekTo(Duration.zero);
       c.play();
     } else {
@@ -169,6 +175,23 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
     if (_visible) _scheduleHide();
   }
 
+  void _showFlash(String message) {
+    setState(() => _flash = message);
+    _flashReset?.cancel();
+    _flashReset = Timer(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _flash = null);
+    });
+  }
+
+  /// YouTube's Autoplay switch in the player (docs/playback.md); off also cancels a running countdown.
+  void _toggleAutoplay() {
+    final s = ref.read(settingsProvider);
+    ref.read(settingsProvider.notifier).update(s.copyWith(autoplay: !s.autoplay));
+    if (s.autoplay) ref.read(upNextCountdownProvider.notifier).cancel();
+    _showFlash(s.autoplay ? 'Autoplay is off' : 'Autoplay is on');
+    _scheduleHide();
+  }
+
   void _doubleTap(TapDownDetails d, double width) => _seekStep(d.localPosition.dx < width / 2 ? -1 : 1);
 
   /// Seeks 10 s back (-1) or forward (1), with YouTube's ripple counting up on repeats.
@@ -195,10 +218,32 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
     }
     final c = ref.watch(playerControllerProvider);
     final error = ref.watch(playerErrorProvider);
+    final countdown = ref.watch(upNextCountdownProvider);
+    // A cancelled countdown leaves the ended video with its controls (and replay button) showing, like YouTube.
+    ref.listen(upNextCountdownProvider, (before, now) {
+      if (before == null && now != null) {
+        // The card hides the controls: a control with focus hands it to the player first, so excluding the controls
+        // doesn't drop focus over the card's Play now request (seen on the TV).
+        if (_playerFocus.hasFocus && !_playerFocus.hasPrimaryFocus) _playerFocus.requestFocus();
+        return;
+      }
+      if (before == null || now != null) return;
+      if (ref.read(playerControllerProvider)?.value.isCompleted ?? false) {
+        _showControls();
+      } else if (DeviceInfo.current.tv) {
+        // The next video started: the remote's focus goes back to the player (Play now has gone).
+        _playerFocus.requestFocus();
+      }
+    });
+    // The Up next card covers the controls.
+    final controlsShown = _visible && countdown == null;
     return Focus(
       focusNode: _playerFocus,
       // On a TV (and in fullscreen) the player takes focus, so the remote controls it straight away.
       autofocus: widget.fullscreen || DeviceInfo.current.tv,
+      // Under the Up next card the arrows move between its buttons only (the player, as wide as the screen, is
+      // otherwise the nearest thing to the left of Play now).
+      skipTraversal: countdown != null,
       onKeyEvent: _onKey,
       child: LayoutBuilder(
         builder: (context, box) => GestureDetector(
@@ -243,12 +288,12 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
                       if (v.isBuffering && !_visible)
                         const Center(child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white)),
                       AnimatedOpacity(
-                        opacity: _visible ? 1 : 0,
+                        opacity: controlsShown ? 1 : 0,
                         duration: const Duration(milliseconds: 200),
                         // Hidden controls take neither taps nor focus.
                         child: IgnorePointer(
-                          ignoring: !_visible,
-                          child: ExcludeFocus(excluding: !_visible, child: _controls(c, v)),
+                          ignoring: !controlsShown,
+                          child: ExcludeFocus(excluding: !controlsShown, child: _controls(c, v)),
                         ),
                       ),
                       if (!_visible && !widget.fullscreen)
@@ -257,17 +302,19 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
                   ),
                 ),
               if (_seekSide != 0) _SeekRipple(side: _seekSide, seconds: _seekSeconds),
-              if (_boost)
-                const Positioned(
-                  top: 12,
+              if (_boost || _flash != null)
+                Positioned(
+                  // Below the top row while the controls show.
+                  top: _visible ? 56 : 12,
                   left: 0,
                   right: 0,
                   child: Center(
                     child: _Pill(
-                      child: Text('2x  ▶▶', style: TextStyle(color: Colors.white)),
+                      child: Text(_flash ?? '2x  ▶▶', style: const TextStyle(color: Colors.white)),
                     ),
                   ),
                 ),
+              if (countdown != null) _UpNextOverlay(countdown: countdown),
             ],
           ),
         ),
@@ -311,6 +358,7 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
                     )
                   else
                     const Spacer(),
+                  _AutoplaySwitch(on: ref.watch(settingsProvider.select((s) => s.autoplay)), onTap: _toggleAutoplay),
                   if (info != null && info.captions.isNotEmpty)
                     _IconBtn(
                       captions == null ? Symbols.closed_caption_disabled : Symbols.closed_caption,
@@ -419,6 +467,211 @@ class _IconBtn extends StatelessWidget {
     onPressed: onTap,
     icon: Icon(icon, size: size, color: Colors.white, fill: filled ? 1 : 0),
   );
+}
+
+/// YouTube's Autoplay switch: a small track with a play (on) or pause (off) thumb.
+class _AutoplaySwitch extends StatelessWidget {
+  const _AutoplaySwitch({required this.on, required this.onTap});
+
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => FocusHighlight(
+    radius: 24,
+    child: Semantics(
+      label: 'Autoplay',
+      toggled: on,
+      child: InkResponse(
+        onTap: onTap,
+        radius: 24,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: SizedBox(
+              width: 36,
+              height: 20,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: on ? 0.7 : 0.35),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  AnimatedAlign(
+                    duration: const Duration(milliseconds: 150),
+                    alignment: on ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: on ? Colors.white : const Color(0xFFBDBDBD),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(on ? Symbols.play_arrow : Symbols.pause, size: 14, fill: 1, color: Colors.black),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// The end-of-video "Up next" card with its countdown, Cancel and Play now (docs/playback.md).
+class _UpNextOverlay extends ConsumerStatefulWidget {
+  const _UpNextOverlay({required this.countdown});
+
+  final UpNextCountdown countdown;
+
+  @override
+  ConsumerState<_UpNextOverlay> createState() => _UpNextOverlayState();
+}
+
+class _UpNextOverlayState extends ConsumerState<_UpNextOverlay> with SingleTickerProviderStateMixin {
+  late final _ring = AnimationController(vsync: this, duration: UpNextCountdownController.length);
+  final _playNow = FocusNode(debugLabel: 'play now');
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+    // The remote lands on Play now, like YouTube for TV (autofocus wouldn't: the player already has focus).
+    if (DeviceInfo.current.tv) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _playNow.requestFocus();
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(_UpNextOverlay old) {
+    super.didUpdateWidget(old);
+    if (old.countdown != widget.countdown) _sync();
+  }
+
+  /// Runs the ring from wherever the countdown is now (it may have started before this player was built).
+  void _sync() {
+    final total = UpNextCountdownController.length.inMilliseconds;
+    final left = widget.countdown.startsAt.difference(DateTime.now()).inMilliseconds.clamp(0, total);
+    _ring
+      ..value = 1 - left / total
+      ..animateTo(1, duration: Duration(milliseconds: left));
+  }
+
+  @override
+  void dispose() {
+    _ring.dispose();
+    _playNow.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final video = widget.countdown.video;
+    final countdown = ref.read(upNextCountdownProvider.notifier);
+    const white70 = TextStyle(color: Colors.white70, fontSize: 12);
+    // Blocks taps from reaching the player underneath.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {},
+      child: ColoredBox(
+        color: Colors.black.withValues(alpha: 0.8),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedBuilder(
+                      animation: _ring,
+                      builder: (context, _) {
+                        final seconds = ((1 - _ring.value) * UpNextCountdownController.length.inSeconds).ceil();
+                        return Text('Up next in $seconds', style: white70);
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      video.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
+                    ),
+                    if (video.channelName case final channel? when channel.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(channel, maxLines: 1, overflow: TextOverflow.ellipsis, style: white70),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FocusHighlight(
+                          radius: 18,
+                          child: TextButton(
+                            onPressed: countdown.cancel,
+                            style: TextButton.styleFrom(foregroundColor: Colors.white),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        FocusHighlight(
+                          radius: 28,
+                          child: Material(
+                            color: Colors.transparent,
+                            shape: const CircleBorder(),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              focusNode: _playNow,
+                              onTap: countdown.playNow,
+                              child: SizedBox(
+                                width: 56,
+                                height: 56,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 52,
+                                      height: 52,
+                                      child: AnimatedBuilder(
+                                        animation: _ring,
+                                        builder: (context, _) => CircularProgressIndicator(
+                                          value: _ring.value,
+                                          strokeWidth: 3,
+                                          color: Colors.white,
+                                          backgroundColor: Colors.white24,
+                                        ),
+                                      ),
+                                    ),
+                                    const Icon(Symbols.play_arrow, size: 32, fill: 1, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Pill extends StatelessWidget {

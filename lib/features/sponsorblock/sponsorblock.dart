@@ -114,7 +114,8 @@ class SbSettingsController extends Notifier<SbSettings> {
   @override
   SbSettings build() {
     final p = ref.watch(prefsProvider);
-    return SbSettings(p.getBool('sb_enabled') ?? true, {
+    // Off until the user turns it on: skipping changes how videos play compared with YouTube.
+    return SbSettings(p.getBool('sb_enabled') ?? false, {
       for (final c in SbCategory.values) c: SbAction.values.asNameMap()[p.getString('sb_${c.name}')] ?? c.defaultAction,
     });
   }

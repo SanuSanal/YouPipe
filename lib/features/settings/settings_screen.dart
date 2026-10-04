@@ -124,13 +124,8 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (v) => ctl.update(s.copyWith(pip: v)),
             ),
             const Divider(),
-            header('Autoplay'),
-            SwitchListTile(
-              title: const Text('Autoplay next video'),
-              subtitle: const Text('When you finish a video, another plays automatically'),
-              value: s.autoplay,
-              onChanged: (v) => ctl.update(s.copyWith(autoplay: v)),
-            ),
+            // Autoplay is switched in the player, like YouTube (docs/playback.md).
+            header('Playback'),
             SwitchListTile(
               title: const Text('Resume where you left off'),
               value: s.resume,

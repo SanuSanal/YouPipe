@@ -52,7 +52,7 @@ A free, ad-free YouTube client for Android, with background play, picture-in-pic
 - Up to 4K, with chapters, captions and seek-bar previews
 
 **Skip the boring bits**
-- Skip sponsor segments, intros and reminders automatically (via [SponsorBlock](https://sponsor.ajay.app))
+- Skip sponsor segments, intros and reminders automatically (via [SponsorBlock](https://sponsor.ajay.app); off by default, turn it on in Settings)
 - Dislike counts are back (via [Return YouTube Dislike](https://returnyoutubedislike.com))
 - Double-tap to seek, hold for 2× speed, playback speed, loop and sleep timer
 

@@ -45,7 +45,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
 - watch title 18/w700;
 - section title 20/w700.
 
-**Toasts** use `showSnack` (in a widget) or `showGlobalSnack` (outside one).
+**Toasts** use `showSnack` (in a widget, 3 s) or `showGlobalSnack` (outside one, 4 s). Both set `persist: false`: Flutter otherwise keeps a toast with an action (Undo, View) on screen until it's tapped, which left the SponsorBlock "Skipped…" toast up for good.
 
 ## Screens
 
@@ -56,7 +56,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
     - A tap on the card shows its controls for 3 s: expand (top left), close (top right), and previous · play/pause · next. A tap on the shown controls opens the watch page.
     - **Room at the end of pages:** while the card shows, the shell sets the pages' bottom padding to its height plus margins, so plain lists end above it and sliver pages end with `SliverBottomInset`. The last item (Settings on You, say) can always scroll clear of the card.
     - **Swipe up** on the card expands it (it follows the finger); **swipe down** closes it (it slides down and fades, then playback stops); **drag sideways** moves it between the bottom-left and bottom-right corners.
-    - Drag the expanded video down to minimise.
+    - Drag the expanded video down to minimise; swipe it up to go fullscreen. In fullscreen, swipe down to leave.
     - One keyed `GestureDetector` wraps the video at every size, so a drag survives the switch between the mini card, the morphing video and `PlayerView`.
     - The nav bar slides away as it expands. The status bar over the expanded player is black.
     - The mini player is hidden on the Shorts tab.
@@ -72,7 +72,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - Tablet means a shortest side of at least 600 dp; everything else is a phone.
 - **Orientation:** phones stay portrait (fullscreen turns to landscape), tablets rotate freely, TVs are left alone (`appOrientations`).
 - **Feed grids:**
-  - `feedColumns`: 1 below 600 dp, 2 below 900, 3 below 1200, then 4. TVs get a card per 220 dp (4 across at 1080p, next to the rail).
+  - `feedColumns`: 1 below 600 dp, 2 below 900, 3 below 1200, then 4. TVs always get 4 across: they report very different widths in dp, and at 6 the thumbnails were too small from the sofa (2026-10-04).
   - `VideoGridSliver` lays videos out (on phones, today's full-width cards); `VideosWithShortsSliver` puts the Shorts shelf after the first grid row (Home, Subscriptions); `FeedSliver` turns search results and channel tabs into grids with Shorts, shelves and rows between (`feedRuns`).
   - Grid cards (`VideoCard(grid: true)`) have rounded thumbnails decoded at their cell size.
   - Channel and playlist rows in feeds, and row pages (playlist, history, downloads, settings, search suggestions, subscriptions), stay within 840 dp (`MaxContentWidth`).
@@ -82,6 +82,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - The **watch page** has two columns: the video (64% of the width) with the details under it, and the related list as compact rows on the right. The Description, Comments and Queue panels open in the right column instead of over the details.
   - **Shorts** play in a centred 9:16 column instead of a cropped band.
 - **The mini player** is capped at 360 dp wide.
+- **TV top bar:** the search box comes first, on the left (a field-like pill, "Search"; Select opens the search page and its keyboard), and the wordmark or page title sits on the right (`YtTopBar`).
 
 ## The TV remote (and keyboards)
 
@@ -95,6 +96,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - Media keys (play/pause, play, pause, fast-forward, rewind) always work.
   - Hidden controls are excluded from focus; when they hide, focus goes back to the player.
   - The seek bar takes focus: Left/Right move the storyboard preview 10 s, releasing the key seeks.
+  - The Autoplay switch is in the top row with CC and Settings; at the end of a video the Up next card's Play now has focus.
 - **On a TV, a picked video opens fullscreen**, like YouTube for TV; Back shows the watch page, Back again the mini player.
 - **Shorts:** Up/Down change Short and Select pauses while the video has focus; Left reaches the side buttons (or the rail); the buttons, channel and Subscribe are focusable.
 - **Not on a TV:** Cast (the TV is the big screen) and PiP (most TVs and Fire TV have none; `MainActivity` won't arm it without the feature).
@@ -147,6 +149,6 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - Downloads, Your subscriptions, History, Settings.
 - **Settings:**
   - General (appearance, language, location, PiP).
-  - Autoplay and resume.
+  - Playback (resume where you left off). Autoplay is switched in the player, like YouTube.
   - Video quality preferences (YouTube's three).
   - SponsorBlock, Updates, history controls, About (diagnostics, licences).
