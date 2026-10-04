@@ -95,7 +95,7 @@ jobs:
             echo
             echo "${changes:-- Bug fixes and improvements}"
             echo
-            echo "**Which APK?** Most phones need \`arm64-v8a\`. Older 32-bit phones need \`armeabi-v7a\`, and \`x86_64\` is for emulators and Chromebooks."
+            echo "**Which APK?** Phones, tablets and most Android/Google TVs need \`arm64-v8a\`. Older 32-bit phones and Fire TV sticks need \`armeabi-v7a\`, and \`x86_64\` is for emulators and Chromebooks."
           } > "$RUNNER_TEMP/notes.md"
           cat "$RUNNER_TEMP/notes.md"
 

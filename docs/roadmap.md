@@ -24,7 +24,7 @@
 ## Next
 
 1. **A real TV:** sideload on an Android/Google TV or a Fire TV stick (the emulators passed; docs/release.md).
-2. **First release:** add the signing secrets (`ANDROID_KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`; release.md), then tag `v0.1.0`. The repo, Pages and remote config are live.
+2. **Releases:** the signing secrets are set (2026-10-04); a `vMAJOR.MINOR.PATCH` tag on `main` builds and publishes one (release.md). The first is `v1.0.0`.
 
 **Phase 5 (shared core) is deferred:** YouPipe is an independent project, so the two apps don't share a package. Useful fixes are copied across by hand.
 
