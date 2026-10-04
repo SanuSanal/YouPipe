@@ -87,8 +87,11 @@ class _ShortsScreenState extends ConsumerState<ShortsScreen> {
     // Only the visible Shorts page plays; the tab is kept alive in the background by the shell.
     final route = ModalRoute.of(context);
     final visible = route?.isCurrent ?? true;
+    // A hidden tab has its tickers off, and this rebuilds when that changes. Riverpod pauses an offstage widget's
+    // listeners, so currentTabProvider alone never reached it: Back from Shorts kept the Short playing on Home.
+    final onScreen = TickerMode.valuesOf(context).enabled;
     final tabActive = !widget.isTab || ref.watch(currentTabProvider) == 1;
-    final active = visible && tabActive && !ref.watch(playerPanelProvider);
+    final active = visible && onScreen && tabActive && !ref.watch(playerPanelProvider);
     if (active) {
       // Shorts take over the sound: pause the main video.
       ref.read(playerServiceProvider).controller.value?.pause();

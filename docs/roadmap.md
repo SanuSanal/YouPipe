@@ -21,6 +21,22 @@
 | 4 | In-app updater, release workflow, signing, R8 release build, website (like YouPipe Music's), README, remote config | Release build runs on the phone; repo and website published 2026-10-04 (https://github.com/SanuSanal/YouPipe, https://sanusanal.github.io/YouPipe/); remote config served. First release waits for the signing secrets |
 | 6 | Tablets (rotation, 2–4 column grids, side rail, two-column watch page) and Android TV / Fire TV (launcher banner, the remote: focus ring, keys, starting focus) | Google TV emulator (Android 16) and Pixel C tablet emulator, 2026-10-04; phone unchanged. A real TV not yet |
 
+## Fixed after release (2026-10-04)
+
+- **Screen sleep:** the screen stays on while a video plays (watch page, fullscreen, mini player).
+- **Background playback:** up to 3 re-resolves in a row (was once per video), waiting for the network while offline, and a Wi-Fi lock while playing.
+- **Autoplay:**
+  - it failed from the mini player and the background; up-next is now fetched early and kept alive;
+  - YouTube's Up next countdown;
+  - the switch moved from Settings into the player.
+- **Gestures:** swipe up on the expanded video for fullscreen, swipe down to leave it.
+- **Shorts:** Back from the Shorts tab no longer leaves the Short playing behind Home.
+- **Toasts** close by themselves, including those with an action (the SponsorBlock Undo toast stayed up).
+- **SponsorBlock is off by default**; it can be turned on in Settings.
+- **TV:**
+  - always 4 cards across;
+  - search box on the left of the top bar, wordmark on the right.
+
 ## Next
 
 1. **A real TV:** sideload on an Android/Google TV or a Fire TV stick (the emulators passed; docs/release.md).

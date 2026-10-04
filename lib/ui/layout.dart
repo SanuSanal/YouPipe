@@ -44,9 +44,10 @@ FormFactor formFactorAtStartup() {
 }
 
 /// How many video cards fit side by side, like YouTube on tablets: 1 on phones, then 2, 3 and 4. TVs, watched from
-/// the sofa like YouTube for TV, fit a card per 220 dp (4 across at 1080p).
+/// the sofa like YouTube for TV, always show 4 (TVs report very different widths in dp, and more columns made the
+/// thumbnails too small to read from the sofa).
 int feedColumns(double width) {
-  if (DeviceInfo.current.tv) return (width / 220).floor().clamp(2, 6);
+  if (DeviceInfo.current.tv) return 4;
   return width < 600
       ? 1
       : width < 900

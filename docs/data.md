@@ -65,7 +65,7 @@ Signed-out YouTube has no Home, so it's built on the device. **Sources:**
 | `saveHistory`, `saveSearchHistory` | false = paused |
 | `homeCache`, `homeShortsCache` | The Home launch cache (above) |
 | `captionLang` | The last caption language (CC remembers it) |
-| `sb_enabled`, `sb_<category>` | SponsorBlock master switch and per-category skip/show/off |
+| `sb_enabled`, `sb_<category>` | SponsorBlock master switch (off by default) and per-category skip/show/off |
 | `autoUpdateCheck`, `skippedUpdateVersion` | Updater |
 | `remoteConfig`, `remoteConfigAt` | Cached remote config |
 | `visitorData` | The anonymous InnerTube session |

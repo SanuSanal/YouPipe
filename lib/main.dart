@@ -15,6 +15,7 @@ import 'data/db/app_database.dart';
 import 'data/library_repository.dart';
 import 'data/video_info.dart';
 import 'features.dart';
+import 'features/watch/player_view.dart';
 import 'innertube/innertube.dart';
 import 'player/video_player_service.dart';
 import 'providers.dart';
@@ -114,6 +115,18 @@ class _YouPipeAppState extends ConsumerState<YouPipeApp> {
       themeMode: settings.themeMode,
       scaffoldMessengerKey: scaffoldMessengerKey,
       routerConfig: _router,
+      // In picture-in-picture the window shows only the video, whatever page is open (Settings and the other
+      // full-screen pages sit above the shell). The pages stay mounted underneath, so nothing loses its state.
+      builder: (context, child) => ValueListenableBuilder<bool>(
+        valueListenable: Pip.instance.active,
+        builder: (context, pip, _) => Stack(
+          fit: StackFit.expand,
+          children: [
+            Offstage(offstage: pip, child: child),
+            if (pip) const ColoredBox(color: Colors.black, child: VideoSurface()),
+          ],
+        ),
+      ),
     );
   }
 }

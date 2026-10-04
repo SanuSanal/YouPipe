@@ -10,6 +10,8 @@ void showGlobalSnack(String message, {String? action, VoidCallback? onAction}) {
     SnackBar(
       content: Text(message),
       duration: const Duration(seconds: 4),
+      // Close after [duration] even with an action (Flutter keeps a toast with an action up until it's tapped).
+      persist: false,
       action: action == null ? null : SnackBarAction(label: action, onPressed: onAction ?? () {}),
     ),
   );

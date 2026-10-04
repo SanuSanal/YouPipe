@@ -65,7 +65,6 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    Pip.instance.active.addListener(_pipChanged);
     for (final hook in shellStartHooks) {
       hook(context, ref);
     }
@@ -73,18 +72,27 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
 
   @override
   void dispose() {
-    Pip.instance.active.removeListener(_pipChanged);
     _panel.dispose();
     _dismiss.dispose();
     _side.dispose();
     super.dispose();
   }
 
-  void _pipChanged() => setState(() {});
+  /// Whether the current drag started on the expanded watch page, and how far it has pulled up past it (a swipe up
+  /// there goes fullscreen, like YouTube).
+  bool _dragFromFull = false;
+  double _pullUp = 0;
+
+  void _dragStart() {
+    _dragFromFull = _panel.value == 1;
+    _pullUp = 0;
+  }
 
   /// Vertical drag on the video: up expands, down minimises; down on the mini player starts closing it.
   void _drag(double dy) {
-    if (_panel.value == 0 && (_dismiss.value > 0 || dy > 0)) {
+    if (_dragFromFull && _panel.value == 1 && dy < 0) {
+      _pullUp -= dy;
+    } else if (_panel.value == 0 && (_dismiss.value > 0 || dy > 0)) {
       _dismiss.value = math.max(0, _dismiss.value + dy);
     } else {
       _panel.value -= dy / _travel;
@@ -103,6 +111,10 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
       } else {
         _dismiss.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOutCubic);
       }
+      return;
+    }
+    if (_dragFromFull && _panel.value == 1 && (_pullUp > 48 || velocity < -500)) {
+      ref.read(fullscreenProvider.notifier).set(true);
       return;
     }
     final expand = velocity < -300 || (velocity.abs() <= 300 && _panel.value > 0.3);
@@ -157,10 +169,6 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
       if (mounted) ref.read(currentTabProvider.notifier).set(tab);
     });
 
-    if (Pip.instance.active.value) {
-      return const Scaffold(backgroundColor: Colors.black, body: VideoSurface());
-    }
-
     final media = MediaQuery.of(context);
     // Wide screens (landscape tablets, TVs) get a side rail and the two-column watch page (docs/ui.md).
     final wide = isWide(media.size);
@@ -200,7 +208,7 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
           body: fullscreen && playing != null
               ? const ColoredBox(
                   color: Colors.black,
-                  child: PlayerView(fullscreen: true, onMinimize: _noop),
+                  child: _FullscreenSwipe(child: PlayerView(fullscreen: true, onMinimize: _noop)),
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {
@@ -270,6 +278,7 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
                                       wide: wide,
                                       fullHeight: size.height,
                                       fade: (1 - _dismiss.value / miniH).clamp(0.0, 1.0),
+                                      onDragStart: _dragStart,
                                       onDrag: _drag,
                                       onDragEnd: _dragEnd,
                                       onSideDrag: _sideDrag,
@@ -356,6 +365,30 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
 
 void _noop() {}
 
+/// In fullscreen a swipe down on the video leaves it, like YouTube.
+class _FullscreenSwipe extends ConsumerStatefulWidget {
+  const _FullscreenSwipe({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_FullscreenSwipe> createState() => _FullscreenSwipeState();
+}
+
+class _FullscreenSwipeState extends ConsumerState<_FullscreenSwipe> {
+  double _pulled = 0;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onVerticalDragStart: (_) => _pulled = 0,
+    onVerticalDragUpdate: (d) => _pulled += d.primaryDelta!,
+    onVerticalDragEnd: (d) {
+      if (_pulled > 48 || (d.primaryVelocity ?? 0) > 500) ref.read(fullscreenProvider.notifier).set(false);
+    },
+    child: widget.child,
+  );
+}
+
 SystemUiOverlayStyle _themeOverlay(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
 
@@ -367,6 +400,7 @@ class _WatchPanel extends ConsumerWidget {
     required this.wide,
     required this.fullHeight,
     required this.fade,
+    required this.onDragStart,
     required this.onDrag,
     required this.onDragEnd,
     required this.onSideDrag,
@@ -388,6 +422,7 @@ class _WatchPanel extends ConsumerWidget {
 
   /// The mini player's opacity while it's swiped down to close.
   final double fade;
+  final VoidCallback onDragStart;
   final ValueChanged<double> onDrag;
   final ValueChanged<double> onDragEnd;
   final ValueChanged<double> onSideDrag;
@@ -480,6 +515,7 @@ class _WatchPanel extends ConsumerWidget {
               clipBehavior: Clip.antiAlias,
               // One detector for every size, so a drag survives the switch between mini and full.
               child: GestureDetector(
+                onVerticalDragStart: (_) => onDragStart(),
                 onVerticalDragUpdate: (d) => onDrag(d.primaryDelta!),
                 onVerticalDragEnd: (d) => onDragEnd(d.primaryVelocity ?? 0),
                 onHorizontalDragUpdate: t == 0 ? (d) => onSideDrag(d.primaryDelta!) : null,
