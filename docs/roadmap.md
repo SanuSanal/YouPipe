@@ -18,12 +18,12 @@
 | 3 | Subscriptions import/export (Takeout, NewPipe) | Unit-tested; the user is trying the file picker |
 | 3 | Optional Google sign-in, account feeds, sync | Yes (the user's account, 2026-10-04; account.md) |
 | 4 | Casting (Chromecast, DLNA) for video | DLNA yes (the user's TV); Chromecast not tried |
-| 4 | In-app updater, release workflow, signing, R8 release build, website (like YouPipe Music's), README, remote config | Release build runs on the phone (after the R8 fix); website previewed locally; publishing needs the GitHub repo |
+| 4 | In-app updater, release workflow, signing, R8 release build, website (like YouPipe Music's), README, remote config | Release build runs on the phone; repo and website published 2026-10-04 (https://github.com/SanuSanal/YouPipe, https://sanusanal.github.io/YouPipe/); remote config served. First release waits for the signing secrets |
 
 ## Next
 
 1. **On-device pass** over everything still marked "not yet" above. Capture the watch page, mini player and Shorts screenshots for the website (site.md).
-2. **Publish:** create `SanuSanal/YouPipe`, add the signing secrets, push, tag `v0.1.0`, and enable Pages.
+2. **First release:** add the signing secrets (`ANDROID_KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`; release.md), then tag `v0.1.0`. The repo, Pages and remote config are live.
 
 **Phase 5 (shared core) is deferred:** YouPipe is an independent project, so the two apps don't share a package. Useful fixes are copied across by hand.
 
