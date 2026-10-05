@@ -54,7 +54,13 @@ void main() {
     prefs = await SharedPreferences.getInstance();
   });
 
-  Future<void> pumpApp(WidgetTester tester, Brightness brightness, Widget home, {List overrides = const []}) async {
+  Future<void> pumpApp(
+    WidgetTester tester,
+    Brightness brightness,
+    Widget home, {
+    List overrides = const [],
+    double textScale = 1,
+  }) async {
     tester.view.physicalSize = const Size(990, 4000); // 360 dp wide: the narrowest common phone
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);
@@ -67,7 +73,14 @@ void main() {
           playerServiceProvider.overrideWithValue(VideoPlayerService(VideoInfoService())),
           ...overrides,
         ],
-        child: MaterialApp(theme: buildYtTheme(brightness), home: home),
+        child: MaterialApp(
+          theme: buildYtTheme(brightness),
+          home: home,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -90,6 +103,15 @@ void main() {
     group(brightness.name, () {
       testWidgets('update sheet', (tester) async {
         await pumpApp(tester, brightness, sheetOpener());
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Update'), findsOneWidget);
+        await expectAccessible(tester);
+      });
+
+      // Android's largest font size is 2x; the buttons wrap instead of overflowing (CI, without Roboto, overflowed).
+      testWidgets('update sheet with the largest font size', (tester) async {
+        await pumpApp(tester, brightness, sheetOpener(), textScale: 2);
         await tester.tap(find.text('open'));
         await tester.pumpAndSettle();
         expect(find.text('Update'), findsOneWidget);
