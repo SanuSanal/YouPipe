@@ -67,3 +67,14 @@ const maxRowContentWidth = 840.0;
 /// are left alone (an empty list means "whatever the device does").
 List<DeviceOrientation> appOrientations(FormFactor f) =>
     f == FormFactor.phone ? const [DeviceOrientation.portraitUp] : const [];
+
+/// Fullscreen: landscape either way up, following the sensor even with rotation lock on, like YouTube
+/// (`youpipe/system` → `landscape`). Flutter's landscapeLeft + landscapeRight honours the lock, so it never flips.
+Future<void> sensorLandscape() async {
+  try {
+    await const MethodChannel('youpipe/system').invokeMethod<void>('landscape');
+  } on Exception catch (e) {
+    debugPrint('YouPipe: sensor landscape unavailable: $e');
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+  }
+}

@@ -60,7 +60,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
     - One keyed `GestureDetector` wraps the video at every size, so a drag survives the switch between the mini card, the morphing video and `PlayerView`.
     - The nav bar slides away as it expands. The status bar over the expanded player is black.
     - The mini player is hidden on the Shorts tab.
-  - **Fullscreen** switches to landscape (phones and tablets; never on a TV) and immersive mode.
+  - **Fullscreen** switches to landscape (phones and tablets; never on a TV) and immersive mode. It follows the sensor to either side, even with rotation lock on, like YouTube (`sensorLandscape`, `SCREEN_ORIENTATION_SENSOR_LANDSCAPE`); before 2026-10-05 it used Flutter's landscapeLeft + landscapeRight, which honours the lock and stayed on one side.
   - **PiP** shows only the video.
   - **Back order:** fullscreen → open panel (description/comments/queue) → expanded player → pages → Home → exit.
   - **Android 16's predictive back** asks the app up front whether it will handle Back. The shell's `PopScope` claims it whenever fullscreen, the expanded player or another tab is showing; otherwise Back would close the app instead of reaching the `BackButtonListener` (found on the Android 16 TV emulator, 2026-10-04).
@@ -151,4 +151,4 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - General (appearance, language, location, PiP).
   - Playback (resume where you left off). Autoplay is switched in the player, like YouTube.
   - Video quality preferences (YouTube's three).
-  - SponsorBlock, Updates, history controls, About (diagnostics, licences).
+  - SponsorBlock, Updates, history controls, About (licences).

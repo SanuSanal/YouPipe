@@ -136,12 +136,7 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
     if (on) {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
       // A TV is always landscape; phones and tablets turn for fullscreen.
-      if (form != FormFactor.tv) {
-        await SystemChrome.setPreferredOrientations([
-          DeviceOrientation.landscapeLeft,
-          DeviceOrientation.landscapeRight,
-        ]);
-      }
+      if (form != FormFactor.tv) await sensorLandscape();
     } else {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       await SystemChrome.setPreferredOrientations(appOrientations(form));

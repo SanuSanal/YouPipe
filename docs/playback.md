@@ -8,7 +8,7 @@
     2. live → HLS;
     3. the DASH manifest;
     4. muxed 360p.
-  - **Recovery:** a mid-play error (an expired or rejected URL, or the network dropping) re-resolves and resumes at the same position.
+  - **Recovery:** a mid-play error (an expired or rejected URL, or the network dropping) re-resolves and resumes at the same position: the last one seen before the error, since `video_player` resets the value to 0:00 and speed 1 when it errors. Before 2026-10-05 it read the reset value, so a stall that ended in an error restarted the video from the beginning.
     - Up to 3 re-resolves in a row (`VideoPlayerService.nextRecovery`); playing a minute past the last recovery point earns a fresh budget, so a long video recovers as often as it needs to but a broken stream doesn't loop. Before 2026-10-04 it was once per video, so a long background session ended on "Tap to retry".
     - **Offline:** if the re-resolve fails and `www.youtube.com` doesn't resolve, the video stays loading and tries again after 5, 15, 30 s and then every minute, for about 5 minutes. The media notification shows buffering meanwhile (still "playing", so the service stays in the foreground). Only then does the error show.
   - **Completion:** it fires `completed` when a video ends.
@@ -51,7 +51,7 @@
 - **PiP:**
   - Armed while a video plays (if enabled), only when the play state or shape changes. Never on devices without the PiP feature (most TVs, Fire TV): `SystemChannel.supportsPip`.
   - Android 12+ enters automatically on Home; older versions enter from `onUserLeaveHint`.
-  - The window then shows only the video. The app root draws it (`MaterialApp.router` `builder` in `main.dart`) above every route, with the pages kept mounted but offstage, so it covers Settings, Diagnostics and sign-in too. Those open above the shell, and before 2026-10-04 PiP from Settings showed the Settings page.
+  - The window then shows only the video. The app root draws it (`MaterialApp.router` `builder` in `main.dart`) above every route, with the pages kept mounted but offstage, so it covers Settings and sign-in too. Those open above the shell, and before 2026-10-04 PiP from Settings showed the Settings page.
 - **Fullscreen:** `fullscreenProvider`. The shell switches to immersive mode (plus landscape on phones and tablets) and shows `PlayerView(fullscreen: true)`. On a TV a picked video starts fullscreen (`playVideo`).
   - Swipe up on the expanded video to enter it, swipe down in fullscreen to leave (more than 48 dp or a fling), like YouTube.
 - **Staying awake:** while a video plays (not paused, ended or failed), `VideoPlayerService` tells `youpipe/system` → `playing`:

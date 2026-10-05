@@ -180,11 +180,6 @@ class SettingsScreen extends ConsumerWidget {
             const Divider(),
             header('About'),
             ListTile(
-              title: const Text('Diagnostics'),
-              subtitle: const Text('Test playback on this device'),
-              onTap: () => context.push('/diagnostics'),
-            ),
-            ListTile(
               title: const Text('Open source licenses'),
               onTap: () => showLicensePage(context: context, applicationName: 'YouPipe'),
             ),
