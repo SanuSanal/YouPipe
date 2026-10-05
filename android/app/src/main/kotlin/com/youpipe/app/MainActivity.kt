@@ -3,6 +3,8 @@ package com.youpipe.app
 import android.app.PictureInPictureParams
 import android.content.res.Configuration
 import android.os.Build
+import android.os.Bundle
+import android.view.View
 import android.util.Rational
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -14,6 +16,15 @@ class MainActivity : AudioServiceActivity() {
     /** Set by Dart while a video plays on the watch page: leaving the app then shrinks it to picture-in-picture. */
     private var pipArmed = false
     private var pipAspect = Rational(16, 9)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Android's own focus highlight (from the legacy window theme: a lime frame round the whole app) shows once a
+        // key is pressed, e.g. a TV remote or a keyboard. Flutter draws its own focus, so turn Android's off.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            findViewById<View>(FLUTTER_VIEW_ID)?.defaultFocusHighlightEnabled = false
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

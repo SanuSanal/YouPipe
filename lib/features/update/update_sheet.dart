@@ -61,7 +61,7 @@ class _UpdateSheet extends ConsumerWidget {
             onPressed: () => controller.downloadAndInstall(update),
             style: FilledButton.styleFrom(
               backgroundColor: context.yt.textPrimary,
-              foregroundColor: Colors.black,
+              foregroundColor: context.yt.background,
               shape: const StadiumBorder(),
             ),
             child: const Text('Update'),
@@ -148,7 +148,7 @@ class _Failure extends StatelessWidget {
     'NETWORK' => "Couldn't download the update. Check your connection and try again.",
     'HASH_MISMATCH' => 'The download was damaged. Try again.',
     'SIGNATURE_MISMATCH' =>
-      'This copy of YouPipe Music was installed from a different build, so Android won\'t update it. '
+      'This copy of YouPipe was installed from a different build, so Android won\'t update it. '
           'Uninstall it, then install the latest version from GitHub.',
     'DOWNGRADE' => 'The installed version is newer than this release.',
     _ => "The update couldn't be installed (${error.message}).",
@@ -168,7 +168,7 @@ class _Failure extends StatelessWidget {
             onPressed: reinstall ? onOpenReleases : onRetry,
             style: FilledButton.styleFrom(
               backgroundColor: context.yt.textPrimary,
-              foregroundColor: Colors.black,
+              foregroundColor: context.yt.background,
               shape: const StadiumBorder(),
             ),
             child: Text(reinstall ? 'Open GitHub' : 'Try again'),
