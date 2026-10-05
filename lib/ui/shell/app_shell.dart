@@ -146,6 +146,10 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     ref.listen(playerPanelProvider, (_, expanded) {
+      // A TV has no mini player: closing the watch page (Back, or leaving it for a page or tab) stops the video.
+      if (!expanded && DeviceInfo.current.tv && ref.read(playbackProvider) != null) {
+        unawaited(ref.read(playbackProvider.notifier).stop());
+      }
       _panel.animateTo(expanded ? 1 : 0, curve: Curves.easeOutCubic);
       // The remote's focus goes back to the rail when the watch page closes (its player had focus).
       if (!expanded) WidgetsBinding.instance.addPostFrameCallback((_) => _rail.currentState?.claimFocus());
@@ -169,8 +173,8 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
     final wide = isWide(media.size);
     final railW = wide ? YtSizes.navRailWidth : 0.0;
     final navHeight = wide ? 0.0 : YtSizes.navBarHeight + media.padding.bottom;
-    // YouTube hides the mini player on the Shorts tab.
-    final hideMini = tab == 1 && !ref.watch(playerPanelProvider);
+    // YouTube hides the mini player on the Shorts tab; a TV has none (the video stops as the watch page closes).
+    final hideMini = (tab == 1 || DeviceInfo.current.tv) && !panelExpanded;
 
     return BackButtonListener(
       onBackButtonPressed: () async {
