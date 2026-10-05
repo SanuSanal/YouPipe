@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resources looked up by name at runtime, which release resource shrinking can't see.
+     ic_stat_youpipe: audio_service's notification icon (androidNotificationIcon in lib/main.dart).
+     audio_service_*: the icons of the notification's buttons. On Android 13+ the Stop button is a custom action, and
+     audio_service throws without its icon, so the media session never updated (no notification, no lock screen
+     controls). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_youpipe,@drawable/audio_service_*" />

@@ -19,6 +19,7 @@ flutter test --tags live --run-skipped   # hits the real InnerTube API (smoke te
 | `test/import_export_test.dart` | Takeout CSV and NewPipe JSON subscriptions |
 | `test/updater_test.dart` | Release parsing, version comparison, APK choice, notes |
 | `test/accessibility_test.dart` | Text contrast (WCAG AA) and tap targets in both themes at 360 dp, with Roboto loaded from the Flutter SDK when it's there (CI may only have the wider test font, so layouts must hold with either): the update sheet (normal, failed, and at Android's largest font size, 2x), Settings, the error view. Caught the light-mode Update button's black-on-black text |
+| `test/playback_test.dart` | The recovery budget, the Up next countdown, and how the media session ends (paused before idle while playing, so no stale notification) |
 | `test/html_text_test.dart` | HTML entity decoding in descriptions and comments (`&apos;`, numeric, no double decoding) |
 
 ## Tablets and TVs (emulators)
