@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.app.UiModeManager
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
@@ -84,6 +85,13 @@ object SystemChannel {
 
                 "playing" -> {
                     setPlaying(activity, call.argument<Boolean>("playing") == true)
+                    result.success(null)
+                }
+
+                // Fullscreen: either landscape side, following the sensor even with rotation lock on (like YouTube).
+                // Flutter's landscapeLeft + landscapeRight maps to USER_LANDSCAPE, which honours the lock.
+                "landscape" -> {
+                    activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                     result.success(null)
                 }
 

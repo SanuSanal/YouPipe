@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/channel/channel_screen.dart';
-import '../features/diagnostics/diagnostics_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/playlist/playlist_screen.dart';
 import '../features/search/search_screen.dart';
@@ -83,7 +82,6 @@ GoRouter buildRouter() => GoRouter(
       ],
     ),
     GoRoute(path: '/settings', parentNavigatorKey: rootNavigatorKey, builder: (_, _) => const SettingsScreen()),
-    GoRoute(path: '/diagnostics', parentNavigatorKey: rootNavigatorKey, builder: (_, _) => const DiagnosticsScreen()),
     ...extraRootRoutes,
   ],
 );

@@ -19,21 +19,6 @@ flutter test --tags live --run-skipped   # hits the real InnerTube API (smoke te
 | `test/import_export_test.dart` | Takeout CSV and NewPipe JSON subscriptions |
 | `test/updater_test.dart` | Release parsing, version comparison, APK choice, notes |
 
-## The playback suite (on the device)
-
-**Settings → About → Diagnostics** (`lib/features/diagnostics/diagnostics_screen.dart`, the Phase 0 suite) runs the playback checks and logs each result as `SPIKE|…`. Run it after every NewPipeExtractor bump:
-
-- **20 VODs** from 8 varied searches. Each is opened at ≤1080p, seeked to **75%** (well past the old 1 MB cap), and must advance 5 s.
-- **2 4K videos** (`maxHeight: 2160`).
-- **2 live streams:** must keep playing without buffering for 6 s. The position stays near the end of the sliding window, so it can't be checked.
-- **5 Shorts** from the Shorts feed.
-- **An age-restricted video** (`6kLq3WMV1nU`): must fail with `AGE_RESTRICTED`.
-- **Comments:** first page, second page, and one reply thread.
-
-The test follows the service's *current* controller, so a mid-play recovery (re-resolve + resume) counts as a pass and is reported as `RECOVERED xN`.
-
-**Background test** (the "Background test" button): plays a video longer than 20 minutes from the start and logs `SPIKE|bg pos=…` every 30 s. Press Home, turn the screen off, and read the log after 10+ minutes.
-
 ## Tablets and TVs (emulators)
 
 - **AVDs** (created 2026-10-04):
@@ -56,7 +41,7 @@ The test follows the service's *current* controller, so a mid-play recovery (re-
 - **Use the Android SDK's adb** (`%LOCALAPPDATA%\Android\sdk\platform-tools\adb.exe`), not the "Minimal ADB" on PATH. The test phone is a Moto edge 20 (`ZD22248D34`, 1080×2400, Android 13).
 - **Bottom nav** at y≈2235: Home x≈135, Shorts x≈405, Subscriptions x≈675, You x≈945. Top-bar search is at (1005, 147).
 - **Raw responses:** debug builds save InnerTube responses to `cache/innertube` (docs/innertube.md).
-- **Logs:** `adb logcat -s flutter:I | grep "SPIKE|\|YouPipe:"`. Native extraction logs use the `YouPipe` tag (`getVideoInfo <id> fetched/streams/done +ms`, and the `clients:` line).
+- **Logs:** `adb logcat -s flutter:I | grep "YouPipe:"`. Native extraction logs use the `YouPipe` tag (`getVideoInfo <id> fetched/streams/done +ms`, and the `clients:` line).
 - **Raise the logcat buffer** (`adb logcat -G 16M`) before a full suite run, or early results rotate out.
 - **Read results from the device.** Stream URLs are bound to the phone's IP, so they can't be replayed from the PC.
 - **Screenshots:** stay inside the app; don't capture the user's home screen.

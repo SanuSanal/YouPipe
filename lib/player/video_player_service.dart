@@ -132,24 +132,31 @@ class VideoPlayerService {
       controller.value = c;
       var failed = false;
       var finished = false;
+      // Where playback got to. An error replaces the controller's value with one at 0:00 and speed 1, so a recovery
+      // resumes from these (still the start point if it failed before the start seek landed).
+      var lastPosition = start;
+      var lastSpeed = speed;
       c.addListener(() {
         if (load != _loads) return;
         final v = c.value;
         handler?.sync(c, i);
         _keepAwake(v.isPlaying && !v.isCompleted && !v.hasError);
-        // A stream that fails mid-play (an expired or rejected URL, or the network dropping, often with the screen
-        // off) gets fresh URLs, a few times in a row at most.
+        if (!v.hasError && v.isInitialized) {
+          if (v.position > Duration.zero) lastPosition = v.position;
+          lastSpeed = v.playbackSpeed;
+        }
+        // A stream that fails mid-play (an expired or rejected URL, a stall, or the network dropping, often with the
+        // screen off) gets fresh URLs, a few times in a row at most.
         if (v.hasError && !failed && s != VideoSource.file) {
           failed = true;
-          // Failing before the start seek landed (the resume point) keeps that start.
-          final at = v.position > Duration.zero ? v.position : start;
+          final at = lastPosition;
           final next = nextRecovery(recoveries, from: start, at: at);
           debugPrint(
             'YouPipe: $id errored at ${at.inSeconds}s (${v.errorDescription}), '
             '${next == null ? 'giving up after $recoveries re-resolves' : 're-resolving ($next/$maxRecoveries)'}',
           );
           if (next != null) {
-            unawaited(_recover(id, at, v.playbackSpeed, next));
+            unawaited(_recover(id, at, lastSpeed, next));
           } else {
             _showError(VideoUnavailable('PLAYBACK_FAILED', v.errorDescription ?? 'Playback failed'));
           }

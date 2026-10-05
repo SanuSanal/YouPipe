@@ -251,10 +251,20 @@ ThemeData buildYtTheme(Brightness brightness) {
       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
       overlayShape: SliderComponentShape.noOverlay,
     ),
+    // The off state needs its own colours: Material's defaults (the outline colour) vanish against our backgrounds.
     switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.link : null),
+      thumbColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.disabled) ? null : (s.contains(WidgetState.selected) ? c.link : c.textSecondary),
+      ),
       trackColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.selected) ? c.link.withValues(alpha: 0.5) : null,
+        (s) => s.contains(WidgetState.disabled)
+            ? null
+            : (s.contains(WidgetState.selected) ? c.link.withValues(alpha: 0.5) : c.chip),
+      ),
+      trackOutlineColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.disabled)
+            ? null
+            : (s.contains(WidgetState.selected) ? Colors.transparent : c.textSecondary),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(

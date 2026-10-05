@@ -19,7 +19,7 @@ YouPipe is an ad-free YouTube client for Android, built with Flutter. It copies 
 | [release.md](release.md) | release workflow, signing, R8, in-app updates |
 | [site.md](site.md) | the GitHub Pages website (`site/`), screenshots (`tool/screenshots.py`), README |
 | [remote_config.md](remote_config.md) | `config/remote.json` |
-| [testing.md](testing.md) | tests, fixtures, Diagnostics, running on the device |
+| [testing.md](testing.md) | tests, fixtures, running on the device |
 | [phase0.md](phase0.md) | what the Phase 0 spike measured |
 | [roadmap.md](roadmap.md) | status, next steps, known issues |
 
