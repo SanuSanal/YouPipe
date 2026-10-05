@@ -11,7 +11,10 @@
 4. **Local release builds:**
    - Signing comes from `android/key.properties`, or the env vars `ANDROID_KEYSTORE_PATH`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`; without them the debug key is used.
    - `key.properties` and `*.jks` are git-ignored.
-5. **R8:** `android/app/proguard-rules.pro` keeps NewPipeExtractor and Rhino, which load classes by reflection, and the no-arg constructors of Room databases. WorkManager opens `WorkDatabase_Impl` by reflection; without that rule the release build crashed at launch in `InitializationProvider` (found 2026-10-03). **Always launch a release build on the phone before tagging**: debug builds don't run R8. Checked on 2026-10-03 (arm64 APK about 26 MB, cold start about 380 ms).
+5. **R8:** `android/app/proguard-rules.pro` keeps NewPipeExtractor and Rhino, which load classes by reflection, and the no-arg constructors of Room databases. WorkManager opens `WorkDatabase_Impl` by reflection; without that rule the release build crashed at launch in `InitializationProvider` (found 2026-10-03).
+   - **Resource shrinking:** `android/app/src/main/res/raw/keep.xml` keeps the drawables that are only looked up by name at runtime: audio_service's notification icon (`ic_stat_youpipe`) and its button icons (`audio_service_*`).
+     - Without them, on Android 13+ audio_service throws "You must specify an icon resource id to build a CustomAction" for the Stop button on every state update. The media session then never updates, so there was no media notification, no lock-screen controls and no foreground service (found 2026-10-05).
+   - **Always launch a release build on the phone before tagging**, play a video and check its notification: debug builds don't run R8 or shrink resources. Checked on 2026-10-03 (arm64 APK about 26 MB, cold start about 380 ms).
 
 ## Android TV, Google TV and Fire TV
 

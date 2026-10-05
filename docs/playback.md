@@ -14,7 +14,9 @@
   - **Completion:** it fires `completed` when a video ends.
 - **`YouPipeAudioHandler`** mirrors the player to the media session (notification, lock screen, headset):
   - previous / play-pause / next / stop, seek ±10 s;
-  - next and previous call the `PlaybackController`.
+  - next, previous and stop call the `PlaybackController`. Stop closes the video like the mini player's close (before 2026-10-05 it left the watch page showing a video that wasn't loaded).
+  - **Ending the session (`cleared`):** if a video is playing, it first reports paused, then goes idle 500 ms later. audio_service detaches the notification on pause and cancels it on idle. Android applies the detach a moment later, so going idle straight away left a stale notification after Stop or closing the mini player mid-play (fixed 2026-10-05).
+  - audio_service finds the notification and button icons by name, so release resource shrinking must keep them (`res/raw/keep.xml`, release.md). Without them, on Android 13+ every state update threw and no notification or lock-screen controls appeared.
 - **`PlaybackController`** (`playbackProvider`):
   - **State:** `NowPlaying` (video, queue, index, loop).
   - **Commands:** `play`, `next`, `previous`, `playNext`, `addToQueue`, `toggleLoop`, `stop`.

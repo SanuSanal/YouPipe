@@ -36,6 +36,7 @@
 - **TV:**
   - always 4 cards across;
   - search box on the left of the top bar, wordmark on the right.
+- **Media notification and lock-screen controls** were missing from release builds (2026-10-05). Resource shrinking removed the icons that audio_service looks up by name, so the media session never updated. `res/raw/keep.xml` now keeps them (release.md). Stop or closing the mini player mid-play also left a stale notification, and notification Stop now closes the video (playback.md).
 
 ## Next
 

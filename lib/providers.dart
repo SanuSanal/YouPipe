@@ -192,7 +192,8 @@ class PlaybackController extends Notifier<NowPlaying?> {
     _completions = _svc.completed.listen(_onCompleted);
     _svc
       ..onNext = next
-      ..onPrevious = previous;
+      ..onPrevious = previous
+      ..onStop = stop;
     // Remember where each video stopped, so it can resume (and for the red progress bars).
     _saver = Timer.periodic(const Duration(seconds: 5), (_) => _savePosition());
     _svc.info.addListener(_enrich);

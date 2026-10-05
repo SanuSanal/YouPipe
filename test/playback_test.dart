@@ -1,5 +1,7 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:youpipe/data/video_info.dart';
 import 'package:youpipe/innertube/models.dart';
 import 'package:youpipe/player/video_player_service.dart';
 import 'package:youpipe/providers.dart';
@@ -54,6 +56,32 @@ void main() {
       expect(played, 1);
       await tester.pump(const Duration(seconds: 10));
       expect(played, 1);
+    });
+  });
+
+  group('media session', () {
+    // Going idle straight from playing left a stale notification: audio_service's detach on pause landed after its
+    // cancel on idle.
+    testWidgets('stopping while playing pauses first and ends the session a moment later', (tester) async {
+      final handler = YouPipeAudioHandler(VideoPlayerService(VideoInfoService()));
+      handler.playbackState.add(PlaybackState(playing: true, processingState: AudioProcessingState.ready));
+      final states = <PlaybackState>[];
+      final sub = handler.playbackState.skip(1).listen(states.add);
+      addTearDown(sub.cancel);
+
+      final cleared = handler.cleared();
+      await tester.pump();
+      expect(states.map((s) => (s.playing, s.processingState)), [(false, AudioProcessingState.ready)]);
+      await tester.pump(const Duration(milliseconds: 500));
+      await cleared;
+      expect(states.last.processingState, AudioProcessingState.idle);
+    });
+
+    testWidgets('stopping while paused ends the session straight away', (tester) async {
+      final handler = YouPipeAudioHandler(VideoPlayerService(VideoInfoService()));
+      handler.playbackState.add(PlaybackState(processingState: AudioProcessingState.ready));
+      await handler.cleared();
+      expect(handler.playbackState.value.processingState, AudioProcessingState.idle);
     });
   });
 }

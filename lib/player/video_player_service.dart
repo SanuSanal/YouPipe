@@ -47,9 +47,10 @@ class VideoPlayerService {
   /// A downloaded copy of a video, played instead of streaming (set by the download manager).
   LocalVideo? Function(String videoId)? localVideo;
 
-  /// Notification/headset next and previous; set by the playback controller.
+  /// Notification/headset next, previous and stop; set by the playback controller.
   VoidCallback? onNext;
   VoidCallback? onPrevious;
+  Future<void> Function()? onStop;
 
   int _loads = 0;
 
@@ -302,7 +303,7 @@ class VideoPlayerService {
     error.value = null;
     _keepAwake(false);
     await _release();
-    handler?.cleared();
+    await handler?.cleared();
   }
 }
 
@@ -375,10 +376,23 @@ class YouPipeAudioHandler extends BaseAudioHandler with SeekHandler {
     playbackState.add(playbackState.value.copyWith(playing: true, processingState: AudioProcessingState.buffering));
   }
 
-  void cleared() {
+  /// Nothing is playing any more: ends the session and removes the notification.
+  Future<void> cleared() async {
     _itemId = null;
+    final old = playbackState.value;
+    if (old.playing) {
+      // audio_service detaches the notification from the foreground service when playback stops, and Android applies
+      // that a moment later. Going idle straight away cancelled the notification first, and the detach then brought
+      // it back: a stale "Pause" notification after Stop, or after closing the mini player, while a video played.
+      playbackState.add(old.copyWith(playing: false));
+      await Future<void>.delayed(_detachDelay);
+      // A new video started meanwhile.
+      if (_itemId != null) return;
+    }
     playbackState.add(playbackState.value.copyWith(playing: false, processingState: AudioProcessingState.idle));
   }
+
+  static const _detachDelay = Duration(milliseconds: 500);
 
   @override
   Future<void> play() async => _c?.play();
@@ -407,11 +421,10 @@ class YouPipeAudioHandler extends BaseAudioHandler with SeekHandler {
     if (c != null) await c.seekTo(c.value.position - const Duration(seconds: 10));
   }
 
+  /// Notification Stop closes the video like the mini player's close button. [cleared] ends the session, so
+  /// [BaseAudioHandler.stop], which goes idle straight away, isn't called.
   @override
-  Future<void> stop() async {
-    await service.stop();
-    await super.stop();
-  }
+  Future<void> stop() async => await (service.onStop ?? service.stop)();
 }
 
 /// Picture-in-picture (`youpipe/pip`, MainActivity.kt). While armed, leaving the app shrinks it to a PiP window.
