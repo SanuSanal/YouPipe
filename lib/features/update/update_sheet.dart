@@ -40,7 +40,11 @@ class _UpdateSheet extends ConsumerWidget {
         onRetry: () => controller.downloadAndInstall(update),
         onOpenReleases: () => ref.read(updaterProvider).openUrl(update.release.pageUrl),
       ),
-      _ => Row(
+      // Skip on the left, Later and Update on the right; with large text they wrap onto two lines instead of
+      // overflowing.
+      _ => OverflowBar(
+        alignment: MainAxisAlignment.spaceBetween,
+        overflowAlignment: OverflowBarAlignment.end,
         children: [
           TextButton(
             onPressed: () async {
@@ -50,21 +54,25 @@ class _UpdateSheet extends ConsumerWidget {
             style: TextButton.styleFrom(foregroundColor: context.yt.textSecondary),
             child: const Text('Skip this version'),
           ),
-          const Spacer(),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(foregroundColor: context.yt.textPrimary),
-            child: const Text('Later'),
-          ),
-          const SizedBox(width: 8),
-          FilledButton(
-            onPressed: () => controller.downloadAndInstall(update),
-            style: FilledButton.styleFrom(
-              backgroundColor: context.yt.textPrimary,
-              foregroundColor: context.yt.background,
-              shape: const StadiumBorder(),
-            ),
-            child: const Text('Update'),
+          OverflowBar(
+            spacing: 8,
+            overflowAlignment: OverflowBarAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(foregroundColor: context.yt.textPrimary),
+                child: const Text('Later'),
+              ),
+              FilledButton(
+                onPressed: () => controller.downloadAndInstall(update),
+                style: FilledButton.styleFrom(
+                  backgroundColor: context.yt.textPrimary,
+                  foregroundColor: context.yt.background,
+                  shape: const StadiumBorder(),
+                ),
+                child: const Text('Update'),
+              ),
+            ],
           ),
         ],
       ),
