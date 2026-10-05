@@ -131,6 +131,24 @@ class _ShortsScreenState extends ConsumerState<ShortsScreen> {
                           : page;
                     },
                   ),
+                  // Top shade, like YouTube: the clock, status icons and search stay visible over a bright video.
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: MediaQuery.paddingOf(context).top + 72,
+                    child: const IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0x80000000), Colors.transparent],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   SafeArea(
                     child: Row(
                       children: [
@@ -390,13 +408,19 @@ class _Rail extends ConsumerWidget {
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
+                // Dark, like YouTube: a white circle washed out over bright videos.
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3), shape: BoxShape.circle),
                 child: Icon(icon, color: Colors.white, fill: filled ? 1 : 0, size: 26),
               ),
               const SizedBox(height: 4),
               Text(
                 label,
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  shadows: [Shadow(blurRadius: 4)],
+                ),
               ),
             ],
           ),

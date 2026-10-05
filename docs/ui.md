@@ -33,6 +33,12 @@ Both themes follow the device setting by default (Settings → Appearance). Read
 | subscribe / onSubscribe | `#F1F1F1` / `#0F0F0F` | `#0F0F0F` / `#FFFFFF` |
 | progress (seek bar, watched bar) | `#FF0033` | `#FF0033` |
 
+**Colour rules:**
+- Pair tokens, never a token with a fixed colour: a button filled with `textPrimary` (or `subscribe`) takes `background` (or `onSubscribe`) for its text. Until 2026-10-05 the update sheet's Update button had `Colors.black` text, which disappeared on the light theme's black fill.
+- Fixed white/black is only for things that are always on video or a dark scrim (player controls, Shorts, thumbnail badges).
+- Switches set their off state explicitly (`switchTheme`): Material's default uses `outline`, which is our 10 % divider and vanished.
+- `test/accessibility_test.dart` checks text contrast in both themes (docs/testing.md).
+
 **Sizes (`YtSizes`):**
 - top bar 48, nav bar 48 (+ inset), mini player 55% of the width (16:9, radius 12, margin 8);
 - chip 32 high, radius 8; pill 36 high, stadium;
@@ -58,7 +64,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
     - **Swipe up** on the card expands it (it follows the finger); **swipe down** closes it (it slides down and fades, then playback stops); **drag sideways** moves it between the bottom-left and bottom-right corners.
     - Drag the expanded video down to minimise; swipe it up to go fullscreen. In fullscreen, swipe down to leave.
     - One keyed `GestureDetector` wraps the video at every size, so a drag survives the switch between the mini card, the morphing video and `PlayerView`.
-    - The nav bar slides away as it expands. The status bar over the expanded player is black.
+    - The nav bar slides away as it expands. The status bar over the expanded player is black with light icons; the system navigation bar keeps the theme's colour (`_panelOverlay`; Flutter's `SystemUiOverlayStyle.light`/`.dark` painted it black under the light watch page until 2026-10-05).
     - The mini player is hidden on the Shorts tab.
   - **Fullscreen** switches to landscape (phones and tablets; never on a TV) and immersive mode. It follows the sensor to either side, even with rotation lock on, like YouTube (`sensorLandscape`, `SCREEN_ORIENTATION_SENSOR_LANDSCAPE`); before 2026-10-05 it used Flutter's landscapeLeft + landscapeRight, which honours the lock and stayed on one side.
   - **PiP** shows only the video.
@@ -88,6 +94,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
 
 - **Focus ring:** `FocusHighlight` draws a rounded ring just outside a widget while it or something inside it has focus, so it shows on any colour (a white chip too). It's on cards, rows, chips, pills, nav items, Shorts buttons, the mini player, the watch page's title, channel, comments and chapters. Focused icon buttons get an outline from the theme (`iconButtonTheme`), and list rows a tint (`focusColor`).
 - **When it shows:** only after key input (`FocusHighlightMode.traditional`), so touch users never see it. TVs always show it (`FocusHighlightStrategy.alwaysTraditional`).
+- **Android's own focus highlight is off** on the Flutter view (`MainActivity`, `defaultFocusHighlightEnabled = false`). With the legacy window theme it drew a lime frame round the whole app after any key press (found 2026-10-05).
 - **Starting focus:** on a TV the rail's selected item takes focus whenever no widget has it (at launch, on a tab change, after the watch page closes).
 - **Reaching the rail:** each tab's pages are their own focus scope, which arrow keys don't leave, so the shell turns a Left that can't move any further into focusing the rail (`_leftToRail`).
 - **Under the watch page** the tabs and the rail are excluded from focus, so the remote can't move behind it.
@@ -124,12 +131,13 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - Double-tap ±10 s with a ripple; hold for 2× speed.
   - **Settings sheet:** Quality, Playback speed, Captions, Loop, Sleep timer.
 - **Shorts:**
-  - A vertical pager, black, with the right rail: like, dislike, comments, share, ⋮.
+  - A vertical pager, black, with the right rail: like, dislike, comments, share, ⋮. The rail's circles are dark (black 30 %) and its labels have a shadow, so they read over bright videos.
+  - A shade at the top (as at the bottom) keeps the clock, status icons and search visible over a bright video.
   - Channel and Subscribe at the bottom left, the title, and a thin white progress bar.
   - Tap to pause; the neighbours preload.
 - **Search:**
-  - A rounded grey field; history rows with a clock icon (long-press to remove) and suggestions with ↖ to fill.
-  - **Results:** feed cards, channel rows with Subscribe, and Shorts and titled shelves. The filter sheet uses YouTube's own groups.
+  - A rounded grey field; history rows with a clock icon (long-press to remove) and suggestions with ↖ to fill. Searching closes the keyboard.
+  - **Results:** feed cards, channel rows with Subscribe, and Shorts and titled shelves. The filter sheet uses YouTube's own groups. `StatusBarScrim` keeps the status bar filled once the search bar floats away.
 - **Channel:**
   - Banner (rounded), avatar 72, name, handle · subscribers · videos, an About sheet, and full-width Subscribe.
   - Scrollable tabs (Home shelves, Videos/Shorts/Live with Latest/Popular/Oldest chips, Releases, Playlists, Podcasts).

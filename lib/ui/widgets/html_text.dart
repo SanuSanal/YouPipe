@@ -133,14 +133,15 @@ String _linkify(String text) => text
       return '<a href="#t=$seconds">${m[0]}</a>';
     });
 
-String _unescape(String s) => s
-    .replaceAll('&amp;', '&')
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&quot;', '"')
-    .replaceAll('&#39;', "'")
-    .replaceAll('&#x27;', "'")
-    .replaceAll('&nbsp;', ' ');
+const _entities = {'amp': '&', 'lt': '<', 'gt': '>', 'quot': '"', 'apos': "'", 'nbsp': ' '};
+
+/// Decodes HTML entities in one pass (so "&amp;lt;" stays "&lt;"), including numeric ones like "&#8217;".
+String _unescape(String s) => s.replaceAllMapped(RegExp(r'&(#[xX][0-9a-fA-F]+|#\d+|[a-zA-Z]+);'), (m) {
+  final e = m[1]!;
+  if (!e.startsWith('#')) return _entities[e] ?? m[0]!;
+  final code = e[1] == 'x' || e[1] == 'X' ? int.tryParse(e.substring(2), radix: 16) : int.tryParse(e.substring(1));
+  return code == null || code > 0x10FFFF ? m[0]! : String.fromCharCode(code);
+});
 
 /// The plain text of YouTube HTML (for one-line previews).
 String htmlToPlain(String html) =>

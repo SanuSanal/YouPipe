@@ -265,7 +265,7 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
                                 Positioned.fill(
                                   // Over the expanded player the status bar is black with light icons, like YouTube.
                                   child: AnnotatedRegion<SystemUiOverlayStyle>(
-                                    value: t > 0.5 ? SystemUiOverlayStyle.light : _themeOverlay(context),
+                                    value: _panelOverlay(context, expanded: t > 0.5),
                                     child: _WatchPanel(
                                       t: t,
                                       video: Rect.lerp(mini, full, t)!,
@@ -384,8 +384,14 @@ class _FullscreenSwipeState extends ConsumerState<_FullscreenSwipe> {
   );
 }
 
-SystemUiOverlayStyle _themeOverlay(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
+/// The theme's system bars, with light status bar icons over the expanded player. Flutter's `SystemUiOverlayStyle.light`
+/// and `.dark` also paint the navigation bar black, which showed a black bar under the light watch page.
+SystemUiOverlayStyle _panelOverlay(BuildContext context, {required bool expanded}) {
+  final themed = Theme.of(context).appBarTheme.systemOverlayStyle!;
+  return expanded
+      ? themed.copyWith(statusBarIconBrightness: Brightness.light, statusBarBrightness: Brightness.dark)
+      : themed;
+}
 
 class _WatchPanel extends ConsumerWidget {
   const _WatchPanel({

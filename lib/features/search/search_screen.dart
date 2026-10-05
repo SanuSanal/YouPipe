@@ -8,6 +8,7 @@ import '../../providers.dart';
 import '../../ui/navigation.dart';
 import '../../ui/theme/yt_theme.dart';
 import '../../ui/widgets/common.dart';
+import '../../ui/widgets/top_bar.dart';
 import '../../ui/widgets/video_tiles.dart';
 
 /// The search field page: history (clock icons) and suggestions as you type.
@@ -33,6 +34,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final query = q.trim();
     if (query.isEmpty) return;
     if (ref.read(settingsProvider).saveSearchHistory) ref.read(libraryProvider).addSearch(query);
+    // The keyboard closes with the search, as on YouTube; otherwise it stays up over the results and the watch page.
+    FocusManager.instance.primaryFocus?.unfocus();
     context.pushReplacement(resultsPath(context, query));
   }
 
@@ -150,58 +153,60 @@ class ResultsScreen extends ConsumerWidget {
     final results = ref.watch(searchResultsProvider(key));
     final entries = results.value?.items ?? const <FeedEntry>[];
     return Scaffold(
-      body: LoadMoreListener(
-        onLoadMore: () => ref.read(searchResultsProvider(key).notifier).loadMore(),
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              floating: true,
-              snap: true,
-              toolbarHeight: YtSizes.topBarHeight + 8,
-              leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Symbols.arrow_back)),
-              titleSpacing: 0,
-              title: SearchField(
-                controller: TextEditingController(text: query),
-                readOnly: true,
-                onTap: () =>
-                    context.pushReplacement('${branchPrefix(context)}/search?q=${Uri.encodeQueryComponent(query)}'),
-              ),
-              actions: [
-                IconButton(
-                  onPressed: () => _showFilters(context, ref, key),
-                  icon: Icon(Symbols.tune, weight: 300, fill: params == null ? 0 : 1),
+      body: StatusBarScrim(
+        child: LoadMoreListener(
+          onLoadMore: () => ref.read(searchResultsProvider(key).notifier).loadMore(),
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                toolbarHeight: YtSizes.topBarHeight + 8,
+                leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Symbols.arrow_back)),
+                titleSpacing: 0,
+                title: SearchField(
+                  controller: TextEditingController(text: query),
+                  readOnly: true,
+                  onTap: () =>
+                      context.pushReplacement('${branchPrefix(context)}/search?q=${Uri.encodeQueryComponent(query)}'),
                 ),
-              ],
-            ),
-            if (results.isLoading && entries.isEmpty)
-              const SliverToBoxAdapter(child: FeedSkeleton())
-            else if (results.hasError && entries.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: ErrorView(error: results.error!, onRetry: () => ref.invalidate(searchResultsProvider(key))),
-              )
-            else if (entries.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: EmptyView(
-                  icon: Symbols.search_off,
-                  title: 'No results found',
-                  message: 'Try different keywords',
-                ),
-              )
-            else
-              SliverMainAxisGroup(
-                slivers: [
-                  FeedSliver(entries),
-                  SliverToBoxAdapter(
-                    child: results.value?.loadingMore ?? false
-                        ? const Padding(padding: EdgeInsets.all(24), child: LoadingView())
-                        : const SizedBox(height: 24),
+                actions: [
+                  IconButton(
+                    onPressed: () => _showFilters(context, ref, key),
+                    icon: Icon(Symbols.tune, weight: 300, fill: params == null ? 0 : 1),
                   ),
                 ],
               ),
-            const SliverBottomInset(),
-          ],
+              if (results.isLoading && entries.isEmpty)
+                const SliverToBoxAdapter(child: FeedSkeleton())
+              else if (results.hasError && entries.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: ErrorView(error: results.error!, onRetry: () => ref.invalidate(searchResultsProvider(key))),
+                )
+              else if (entries.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: EmptyView(
+                    icon: Symbols.search_off,
+                    title: 'No results found',
+                    message: 'Try different keywords',
+                  ),
+                )
+              else
+                SliverMainAxisGroup(
+                  slivers: [
+                    FeedSliver(entries),
+                    SliverToBoxAdapter(
+                      child: results.value?.loadingMore ?? false
+                          ? const Padding(padding: EdgeInsets.all(24), child: LoadingView())
+                          : const SizedBox(height: 24),
+                    ),
+                  ],
+                ),
+              const SliverBottomInset(),
+            ],
+          ),
         ),
       ),
     );
