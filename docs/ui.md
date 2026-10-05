@@ -66,9 +66,10 @@ Both themes follow the device setting by default (Settings → Appearance). Read
     - One keyed `GestureDetector` wraps the video at every size, so a drag survives the switch between the mini card, the morphing video and `PlayerView`.
     - The nav bar slides away as it expands. The status bar over the expanded player is black with light icons; the system navigation bar keeps the theme's colour (`_panelOverlay`; Flutter's `SystemUiOverlayStyle.light`/`.dark` painted it black under the light watch page until 2026-10-05).
     - The mini player is hidden on the Shorts tab.
+    - **A TV has no mini player.** When the watch page closes there (Back, the minimise arrow, or a page opened from it), playback stops.
   - **Fullscreen** switches to landscape (phones and tablets; never on a TV) and immersive mode. It follows the sensor to either side, even with rotation lock on, like YouTube (`sensorLandscape`, `SCREEN_ORIENTATION_SENSOR_LANDSCAPE`); before 2026-10-05 it used Flutter's landscapeLeft + landscapeRight, which honours the lock and stayed on one side.
   - **PiP** shows only the video.
-  - **Back order:** fullscreen → open panel (description/comments/queue) → expanded player → pages → Home → exit.
+  - **Back order:** fullscreen → open panel (description/comments/queue) → expanded player → pages → Home → exit. On a TV, Back from the expanded player closes the video instead of shrinking it.
   - **Android 16's predictive back** asks the app up front whether it will handle Back. The shell's `PopScope` claims it whenever fullscreen, the expanded player or another tab is showing; otherwise Back would close the app instead of reaching the `BackButtonListener` (found on the Android 16 TV emulator, 2026-10-04).
 
 ## Tablets and TVs (`lib/ui/layout.dart`)
@@ -104,7 +105,9 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - Hidden controls are excluded from focus; when they hide, focus goes back to the player.
   - The seek bar takes focus: Left/Right move the storyboard preview 10 s, releasing the key seeks.
   - The Autoplay switch is in the top row with CC and Settings; at the end of a video the Up next card's Play now has focus.
-- **On a TV, a picked video opens fullscreen**, like YouTube for TV; Back shows the watch page, Back again the mini player.
+- **On a TV, a picked video opens fullscreen**, like YouTube for TV. Back shows the watch page; Back again stops the video and returns to the page underneath (2026-10-05; before, it shrank to the mini player).
+- **Radio choices** (settings' video quality, the Appearance, Language and Location pickers) are `ChoiceTile` rows, not `RadioListTile`. Flutter's `RadioGroup` takes the arrow keys: each press selects the next radio and wraps around, so the remote couldn't leave the list, and in a picker the first Down chose a value and closed it (found 2026-10-05).
+- **The results page's search field** is a focusable pill (`SearchField(readOnly: true)`), so Select reopens the search page with the query. As a read-only `TextField` it took focus but ignored Select, because its `onTap` is touch-only.
 - **Shorts:** Up/Down change Short and Select pauses while the video has focus; Left reaches the side buttons (or the rail); the buttons, channel and Subscribe are focusable.
 - **Not on a TV:** Cast (the TV is the big screen) and PiP (most TVs and Fire TV have none; `MainActivity` won't arm it without the feature).
 - **Known gaps:**

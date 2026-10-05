@@ -121,23 +121,56 @@ class SearchField extends StatelessWidget {
   final bool autofocus;
 
   @override
-  Widget build(BuildContext context) => Container(
-    height: 40,
-    decoration: BoxDecoration(color: context.yt.chip, borderRadius: BorderRadius.circular(20)),
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    alignment: Alignment.centerLeft,
-    child: TextField(
-      controller: controller,
-      autofocus: autofocus && !readOnly,
-      readOnly: readOnly,
-      onTap: onTap,
-      onChanged: onChanged,
-      onSubmitted: onSubmitted,
-      textInputAction: TextInputAction.search,
-      style: const TextStyle(fontSize: 16),
-      decoration: const InputDecoration(hintText: 'Search YouPipe', isCollapsed: true, border: InputBorder.none),
-    ),
-  );
+  Widget build(BuildContext context) {
+    if (readOnly) return _pill(context);
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(color: context.yt.chip, borderRadius: BorderRadius.circular(20)),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.centerLeft,
+      child: TextField(
+        controller: controller,
+        autofocus: autofocus,
+        onChanged: onChanged,
+        onSubmitted: onSubmitted,
+        textInputAction: TextInputAction.search,
+        style: const TextStyle(fontSize: 16),
+        decoration: const InputDecoration(hintText: 'Search YouPipe', isCollapsed: true, border: InputBorder.none),
+      ),
+    );
+  }
+
+  /// The read-only field (on the results page) is a button, so the TV remote's Select opens the search page too (a
+  /// read-only TextField's onTap is touch-only).
+  Widget _pill(BuildContext context) {
+    final text = controller?.text ?? '';
+    return SizedBox(
+      height: 40,
+      child: FocusHighlight(
+        radius: 20,
+        child: Material(
+          color: context.yt.chip,
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  text.isEmpty ? 'Search YouPipe' : text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 16, color: text.isEmpty ? context.yt.textSecondary : null),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Search results with YouTube's filter sheet.

@@ -62,16 +62,8 @@ class SettingsScreen extends ConsumerWidget {
       builder: (d) => SimpleDialog(
         title: Text(title),
         children: [
-          RadioGroup<T>(
-            groupValue: selected,
-            onChanged: (v) => Navigator.pop(d, v),
-            child: Column(
-              children: [
-                for (final e in options.entries)
-                  RadioListTile<T>(value: e.key, title: Text(e.value), activeColor: c.link),
-              ],
-            ),
-          ),
+          for (final e in options.entries)
+            ChoiceTile(title: e.value, selected: e.key == selected, onTap: () => Navigator.pop(d, e.key)),
         ],
       ),
     );
@@ -133,23 +125,13 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const Divider(),
             header('Video quality preferences'),
-            RadioGroup<VideoQualityPref>(
-              groupValue: s.quality,
-              onChanged: (v) {
-                if (v != null) ctl.update(s.copyWith(quality: v));
-              },
-              child: Column(
-                children: [
-                  for (final q in VideoQualityPref.values)
-                    RadioListTile<VideoQualityPref>(
-                      value: q,
-                      activeColor: c.link,
-                      title: Text(q.label),
-                      subtitle: Text(q.description),
-                    ),
-                ],
+            for (final q in VideoQualityPref.values)
+              ChoiceTile(
+                title: q.label,
+                subtitle: q.description,
+                selected: q == s.quality,
+                onTap: () => ctl.update(s.copyWith(quality: q)),
               ),
-            ),
             for (final section in settingsExtraSections) section(context, ref),
             const Divider(),
             header('Manage all history'),

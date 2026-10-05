@@ -430,6 +430,35 @@ class MaxContentWidth extends StatelessWidget {
   );
 }
 
+/// A radio-button row for settings and pickers. Not a `RadioListTile`: its `RadioGroup` takes the arrow keys (each
+/// press selects the next radio and wraps around), so the TV remote could never leave the list (docs/ui.md).
+class ChoiceTile extends StatelessWidget {
+  const ChoiceTile({super.key, required this.title, this.subtitle, required this.selected, required this.onTap});
+
+  final String title;
+  final String? subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.yt;
+    return Semantics(
+      inMutuallyExclusiveGroup: true,
+      checked: selected,
+      child: ListTile(
+        leading: Icon(
+          selected ? Symbols.radio_button_checked : Symbols.radio_button_unchecked,
+          color: selected ? c.link : c.textSecondary,
+        ),
+        title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle!),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
 /// A focus ring for the TV remote and keyboards (docs/ui.md): a rounded border drawn over [child] while it, or a
 /// widget inside it, has focus. Hidden while the screen is being touched, so phones never show it.
 class FocusHighlight extends StatefulWidget {
