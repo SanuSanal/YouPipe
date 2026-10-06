@@ -39,6 +39,7 @@
   - no mini player: Back from the watch page stops the video and returns to the page (2026-10-05);
   - the remote can move through and past Settings' video quality rows, and reach the results page's search field (2026-10-05).
 - **Media notification and lock-screen controls** were missing from release builds (2026-10-05). Resource shrinking removed the icons that audio_service looks up by name, so the media session never updated. `res/raw/keep.xml` now keeps them (release.md). Stop or closing the mini player mid-play also left a stale notification, and notification Stop now closes the video (playback.md).
+- **Swiping the app away in Recents, or closing the PiP window,** left the video playing; both now stop it, like YouTube (2026-10-06, playback.md).
 
 ## Next
 

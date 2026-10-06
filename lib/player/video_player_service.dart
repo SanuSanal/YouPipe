@@ -425,13 +425,23 @@ class YouPipeAudioHandler extends BaseAudioHandler with SeekHandler {
   /// [BaseAudioHandler.stop], which goes idle straight away, isn't called.
   @override
   Future<void> stop() async => await (service.onStop ?? service.stop)();
+
+  /// Swiping the app away in Recents closes the video, like YouTube (audio_service's default does nothing, so the
+  /// foreground service kept it playing).
+  @override
+  Future<void> onTaskRemoved() => stop();
 }
 
 /// Picture-in-picture (`youpipe/pip`, MainActivity.kt). While armed, leaving the app shrinks it to a PiP window.
 class Pip {
   Pip._() {
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'changed') active.value = call.arguments == true;
+      switch (call.method) {
+        case 'changed':
+          active.value = call.arguments == true;
+        case 'closed':
+          onClosed?.call();
+      }
     });
   }
 
@@ -440,6 +450,9 @@ class Pip {
 
   /// Whether the app is in a PiP window right now; the app then shows only the video.
   final active = ValueNotifier(false);
+
+  /// The PiP window was closed (not expanded back into the app); set in main.dart to stop the video.
+  VoidCallback? onClosed;
 
   Future<void> arm(bool enabled, {Size aspect = const Size(16, 9)}) => _channel.invokeMethod('arm', {
     'enabled': enabled,

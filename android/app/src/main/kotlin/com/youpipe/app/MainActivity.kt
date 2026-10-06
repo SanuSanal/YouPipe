@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.util.Rational
+import androidx.lifecycle.Lifecycle
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -108,5 +109,10 @@ class MainActivity : AudioServiceActivity() {
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         pipChannel?.invokeMethod("changed", isInPictureInPictureMode)
+        // Closing the PiP window only stops the activity (expanding it starts it again), and the task stays, so
+        // audio_service's onTaskRemoved doesn't fire: tell Dart, which stops the video like YouTube.
+        if (!isInPictureInPictureMode && lifecycle.currentState == Lifecycle.State.CREATED) {
+            pipChannel?.invokeMethod("closed", null)
+        }
     }
 }

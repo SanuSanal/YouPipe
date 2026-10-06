@@ -63,6 +63,8 @@
 - **Background:**
   - `VideoPlayerOptions(allowBackgroundPlayback: true)` plus the audio_service foreground service.
   - Tested for 11 minutes screen-off in Phase 0.
+  - **Swiping the app away in Recents stops the video**, like YouTube (`YouPipeAudioHandler.onTaskRemoved` runs the notification's Stop). audio_service's default does nothing there, so the foreground service kept it playing (reported 2026-10-06). Leaving with Home keeps it playing in the background.
+  - **Closing the PiP window stops the video too.** Android only stops the activity then (the task stays, so `onTaskRemoved` doesn't fire). `MainActivity.onPictureInPictureModeChanged` tells it apart from expanding the window by the lifecycle (stopped, not started) and sends `closed` on `youpipe/pip`; `Pip.onClosed` runs the same Stop (found 2026-10-06).
 
 ## Shorts
 
