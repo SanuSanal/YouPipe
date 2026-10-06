@@ -73,5 +73,5 @@ Videos `EgIQAQ%3D%3D` · Shorts `EgIQCQ%3D%3D` · Channels `EgIQAg%3D%3D` · Pla
 | `youpipe/cookies` | `get({url})` → cookie string; `clear()` | `CookieChannel.kt` |
 | `youpipe/cast` (+ `youpipe/cast/events`) | `selectRoute`, `load`, `play`, `pause`, `seek`, `setVolume`, `disconnect`, `relayStart`, `relayUrl`, `relayStop` | `CastChannel.kt`, `CastProxy.kt` |
 | `youpipe/updater` | `appInfo()`, `install({path})`, `openUrl({url})` | `UpdateChannel.kt` |
-| `youpipe/pip` | `arm({enabled, width, height})`, `enter()`; from Kotlin: `changed(bool)` | `MainActivity.kt` |
+| `youpipe/pip` | `arm({enabled, width, height})`, `enter()`; from Kotlin: `changed(bool)`, `closed()` (the PiP window was closed, not expanded) | `MainActivity.kt` |
 | `youpipe/system` | `requestNotifications()`; `device()` → `{tv, pip}` (television UI mode or leanback; the PiP feature), read once at startup (docs/ui.md); `playing({playing})`: keep the screen on and hold a Wi-Fi lock while a video plays (needs `ACCESS_WIFI_STATE`; docs/playback.md); `landscape()`: sensor landscape for fullscreen, either side even with rotation lock on (docs/ui.md) | `SystemChannel.kt` |
