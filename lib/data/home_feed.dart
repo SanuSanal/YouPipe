@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -164,6 +165,74 @@ class _ListSource extends _Source {
   }
 }
 
+/// Topics Home falls back on when there's nothing personal (the feed and the Shorts shelf).
+const discoverTopics = ['music', 'news today', 'gaming', 'comedy', 'science', 'sports highlights'];
+
+/// The Shorts searches behind Home's shelf (docs/data.md). A topic chip searches its own query. "All" picks, at
+/// random, two channels you watched or follow and one topic, or three topics when there's nothing personal yet.
+/// So every load (and every pull-to-refresh) asks for a different set.
+List<String> homeShortsQueries({
+  required HomeChip chip,
+  required List<HistoryEntry> history,
+  required List<FeedVideo> subscriptionFeed,
+  Random? random,
+}) {
+  final rnd = random ?? Random();
+  if (chip.kind == HomeChipKind.search) return [chip.query!];
+  final channels = <String>{
+    for (final h in history.take(30))
+      if (h.video.channelName case final n? when n.trim().isNotEmpty) n.trim(),
+    for (final f in subscriptionFeed)
+      if (f.video.channelName case final n? when n.trim().isNotEmpty) n.trim(),
+  }.toList()..shuffle(rnd);
+  final topics = [...discoverTopics]..shuffle(rnd);
+  final personal = channels.take(2).toList();
+  return [...personal, ...topics.take(personal.isEmpty ? 3 : 1)];
+}
+
+/// Loads Home's Shorts shelf: runs [homeShortsQueries] at once, drops Shorts already in your history, and shuffles
+/// the merged results. Throws only when every search fails.
+Future<List<VideoItem>> loadHomeShorts({
+  required HomeChip chip,
+  required InnerTube yt,
+  required LibraryRepository library,
+  required List<FeedVideo> subscriptionFeed,
+  int count = 12,
+  Random? random,
+}) async {
+  final rnd = random ?? Random();
+  final history = await library.watchHistory(limit: 200).first;
+  final seen = {for (final h in history) h.video.id};
+  final queries = homeShortsQueries(chip: chip, history: history, subscriptionFeed: subscriptionFeed, random: rnd);
+  Object? error;
+  final pages = await Future.wait([
+    for (final q in queries)
+      yt
+          .search(q, params: SearchFilter.shorts.params)
+          .then((p) => p.entries.allItems.whereType<VideoItem>().where((v) => v.isShort).toList())
+          .catchError((Object e) {
+            error ??= e;
+            return const <VideoItem>[];
+          }),
+  ]);
+  if (pages.every((p) => p.isEmpty) && error != null) throw error!;
+  final out = <VideoItem>[];
+  final ids = <String>{};
+  // Fresh first: Shorts you haven't played, then (only to fill the shelf) ones you have.
+  for (final pass in [false, true]) {
+    final pool = [
+      for (final p in pages)
+        for (final v in p)
+          if (seen.contains(v.id) == pass && !ids.contains(v.id)) v,
+    ]..shuffle(rnd);
+    for (final v in pool) {
+      if (out.length >= count) break;
+      if (ids.add(v.id)) out.add(v);
+    }
+  }
+  return out;
+}
+
 /// Builds the signed-out Home: related videos of recent history, unwatched subscription uploads, and topic searches
 /// when there's nothing personal yet (docs/data.md).
 class HomeMixer {
@@ -173,7 +242,7 @@ class HomeMixer {
   final Set<String> _exclude;
   final _seen = <String>{};
 
-  static const _discover = ['music', 'news today', 'gaming', 'comedy', 'science', 'sports highlights'];
+  static const _discover = discoverTopics;
 
   static Future<HomeMixer> create({
     required HomeChip chip,

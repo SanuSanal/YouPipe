@@ -49,6 +49,12 @@ Signed-out YouTube has no Home, so it's built on the device. **Sources:**
 
 **Topic chips** (Music, Gaming, Live, News, …) are searches. "Recently uploaded" shows the subscription uploads.
 
+**Shorts shelf (`loadHomeShorts`):** Shorts searches (they carry titles and view counts), run at once and merged.
+- A topic chip searches its own query.
+- "All" picks, at random, two channel names from the last 30 watched videos and the subscription feed, plus one topic. With nothing personal it picks three topics. So each load and each pull-to-refresh gives a different shelf.
+- Shorts already in the watch history go last, used only to fill the shelf. The merged list is shuffled and cut to 12.
+- It fails only when every search fails.
+
 **Launch cache (`HomeController`, `homeShortsProvider`):** the mix takes 1.3–1.7 s of network time, so the last first page of the "All" chip and its Shorts shelf are kept in preferences (`homeCache`, `homeShortsCache`: `{at, items}` of `VideoItem.toJson`, used for 12 hours).
 - Once per launch, Home shows the cached page in the first frame while the fresh mix loads.
 - The fresh page replaces it only if the user hasn't touched Home yet (`HomeController.touched`), so a tap never lands on a video that just changed. Otherwise the cached page stays, and "load more" continues from the fresh mix without repeats.

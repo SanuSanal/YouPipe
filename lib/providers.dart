@@ -653,14 +653,19 @@ class HomeController extends AsyncNotifier<HomeState> {
   }
 }
 
-/// Shorts for the Home shelf (from a Shorts search, which carries titles and view counts). At launch the cached
-/// shelf shows straight away, so the feed below doesn't jump when it arrives; the fresh one is saved for next time.
+/// Shorts for the Home shelf (from Shorts searches, which carry titles and view counts; see [loadHomeShorts]). At
+/// launch the cached shelf shows straight away, so the feed below doesn't jump when it arrives; the fresh one is saved
+/// for next time.
 final homeShortsProvider = FutureProvider<List<VideoItem>>((ref) async {
   final chip = ref.watch(homeChipProvider);
   final prefs = ref.read(prefsProvider);
   Future<List<VideoItem>> fetch() async {
-    final page = await ref.read(innerTubeProvider).search(chip.query ?? 'trending', params: SearchFilter.shorts.params);
-    final shorts = page.entries.allItems.whereType<VideoItem>().where((v) => v.isShort).take(12).toList();
+    final shorts = await loadHomeShorts(
+      chip: chip,
+      yt: ref.read(innerTubeProvider),
+      library: ref.read(libraryProvider),
+      subscriptionFeed: await ref.read(subscriptionsFeedServiceProvider).watch().first,
+    );
     if (chip == HomeChip.all && shorts.isNotEmpty) await writeVideoCache(prefs, _shortsCacheKey, shorts);
     return shorts;
   }
