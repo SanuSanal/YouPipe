@@ -511,6 +511,24 @@ class FullscreenController extends Notifier<bool> {
   void set(bool value) => state = value;
 }
 
+/// YouTube's "Lock screen" in the fullscreen player: touches (and Back) only bring up the unlock button. Leaving
+/// fullscreen unlocks.
+final screenLockProvider = NotifierProvider<ScreenLockController, bool>(ScreenLockController.new);
+
+class ScreenLockController extends Notifier<bool> {
+  /// Bumped when a locked player should show its unlock button (Back was pressed).
+  final hint = ValueNotifier<int>(0);
+
+  @override
+  bool build() {
+    ref.watch(fullscreenProvider);
+    return false;
+  }
+
+  void set(bool value) => state = value;
+  void poke() => hint.value++;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Paged lists
 // ---------------------------------------------------------------------------------------------------------------

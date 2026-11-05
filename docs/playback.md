@@ -56,6 +56,7 @@
   - The window then shows only the video. The app root draws it (`MaterialApp.router` `builder` in `main.dart`) above every route, with the pages kept mounted but offstage, so it covers Settings and sign-in too. Those open above the shell, and before 2026-10-04 PiP from Settings showed the Settings page.
 - **Fullscreen:** `fullscreenProvider`. The shell switches to immersive mode (plus landscape on phones and tablets) and shows `PlayerView(fullscreen: true)`. On a TV a picked video starts fullscreen (`playVideo`).
   - Swipe up on the expanded video to enter it, swipe down in fullscreen to leave (more than 48 dp or a fling), like YouTube.
+  - **Lock screen** (the lock button in the fullscreen controls): `screenLockProvider` blocks touches and Back until the user taps the unlock button; it resets whenever fullscreen changes (docs/ui.md).
 - **Staying awake:** while a video plays (not paused, ended or failed), `VideoPlayerService` tells `youpipe/system` → `playing`:
   - the activity keeps the screen on (`FLAG_KEEP_SCREEN_ON`), which only matters while the app is visible: the watch page, fullscreen, the mini player or PiP;
   - a Wi-Fi lock (`WIFI_MODE_FULL_HIGH_PERF`, what ExoPlayer's `WAKE_MODE_NETWORK` uses) keeps Wi-Fi out of power save with the screen off. audio_service already holds the CPU wakelock while playing, but video_player's ExoPlayer holds no Wi-Fi lock.

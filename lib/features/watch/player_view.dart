@@ -79,6 +79,11 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
   String? _flash;
   Timer? _flashReset;
 
+  /// The unlock button of a locked screen, shown for a few seconds after a touch (or Back).
+  bool _lockHint = false;
+  Timer? _lockHintReset;
+  late final ValueNotifier<int> _lockPokes;
+
   /// The player itself, focused while its controls are hidden (TV remote, keyboards); see [_onKey].
   final _playerFocus = FocusNode(debugLabel: 'player');
   final _playPauseFocus = FocusNode(debugLabel: 'play/pause');
@@ -87,10 +92,13 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
   void initState() {
     super.initState();
     _scheduleHide();
+    _lockPokes = ref.read(screenLockProvider.notifier).hint..addListener(_showLockHint);
   }
 
   @override
   void dispose() {
+    _lockPokes.removeListener(_showLockHint);
+    _lockHintReset?.cancel();
     _hide?.cancel();
     _seekReset?.cancel();
     _flashReset?.cancel();
@@ -153,6 +161,11 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
       _seekStep(key == LogicalKeyboardKey.mediaFastForward ? 1 : -1);
       return KeyEventResult.handled;
     }
+    // A locked screen: other keys just bring up the unlock button (Back is the shell's, see app_shell.dart).
+    if (_locked) {
+      if (node.hasPrimaryFocus) _showLockHint();
+      return node.hasPrimaryFocus ? KeyEventResult.handled : KeyEventResult.ignored;
+    }
     if (!node.hasPrimaryFocus) {
       if (_visible) _scheduleHide();
       return KeyEventResult.ignored;
@@ -173,6 +186,17 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
   void _toggle() {
     setState(() => _visible = !_visible);
     if (_visible) _scheduleHide();
+  }
+
+  bool get _locked => widget.fullscreen && ref.read(screenLockProvider);
+
+  void _showLockHint() {
+    if (!mounted || !_locked) return;
+    setState(() => _lockHint = true);
+    _lockHintReset?.cancel();
+    _lockHintReset = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _lockHint = false);
+    });
   }
 
   void _showFlash(String message) {
@@ -235,8 +259,22 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
         _playerFocus.requestFocus();
       }
     });
-    // The Up next card covers the controls.
-    final controlsShown = _visible && countdown == null;
+    final locked = widget.fullscreen && ref.watch(screenLockProvider);
+    ref.listen(screenLockProvider, (_, on) {
+      if (!widget.fullscreen) return;
+      if (on) {
+        if (_playerFocus.hasFocus && !_playerFocus.hasPrimaryFocus) _playerFocus.requestFocus();
+        setState(() => _visible = false);
+        _showLockHint();
+      } else {
+        _lockHintReset?.cancel();
+        setState(() => _lockHint = false);
+        _showControls();
+      }
+    });
+    // The Up next card covers the controls; a locked screen has none.
+    final controlsShown = _visible && countdown == null && !locked;
+    final barsShown = _visible && !locked;
     return Focus(
       focusNode: _playerFocus,
       // On a TV (and in fullscreen) the player takes focus, so the remote controls it straight away.
@@ -248,27 +286,32 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
       child: LayoutBuilder(
         builder: (context, box) => GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: _toggle,
-          onDoubleTapDown: (d) => _doubleTap(d, box.maxWidth),
-          onDoubleTap: () {},
+          // Locked: a touch only brings up the unlock button.
+          onTap: locked ? _showLockHint : _toggle,
+          onDoubleTapDown: locked ? null : (d) => _doubleTap(d, box.maxWidth),
+          onDoubleTap: locked ? null : () {},
           // Hold for 2x speed, like YouTube.
-          onLongPressStart: (_) {
-            final v = c?.value;
-            if (v == null || !v.isPlaying) return;
-            setState(() => _boost = true);
-            c!.setPlaybackSpeed(2);
-          },
-          onLongPressEnd: (_) {
-            if (!_boost) return;
-            setState(() => _boost = false);
-            c?.setPlaybackSpeed(1);
-          },
+          onLongPressStart: locked
+              ? null
+              : (_) {
+                  final v = c?.value;
+                  if (v == null || !v.isPlaying) return;
+                  setState(() => _boost = true);
+                  c!.setPlaybackSpeed(2);
+                },
+          onLongPressEnd: locked
+              ? null
+              : (_) {
+                  if (!_boost) return;
+                  setState(() => _boost = false);
+                  c?.setPlaybackSpeed(1);
+                },
           child: Stack(
             fit: StackFit.expand,
             children: [
               const VideoSurface(),
               if (c != null && c.value.isInitialized)
-                CaptionOverlay(controller: c, bottom: _visible ? (widget.fullscreen ? 72 : 48) : 12),
+                CaptionOverlay(controller: c, bottom: barsShown ? (widget.fullscreen ? 72 : 48) : 12),
               if (error != null)
                 _ErrorOverlay(error: error)
               else if (c == null || !c.value.isInitialized)
@@ -285,7 +328,7 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
                   builder: (context, v, _) => Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (v.isBuffering && !_visible)
+                      if (v.isBuffering && !barsShown)
                         const Center(child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white)),
                       AnimatedOpacity(
                         opacity: controlsShown ? 1 : 0,
@@ -305,7 +348,7 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
               if (_boost || _flash != null)
                 Positioned(
                   // Below the top row while the controls show.
-                  top: _visible ? 56 : 12,
+                  top: barsShown ? 56 : 12,
                   left: 0,
                   right: 0,
                   child: Center(
@@ -314,7 +357,16 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
                     ),
                   ),
                 ),
-              if (countdown != null) _UpNextOverlay(countdown: countdown),
+              if (countdown != null)
+                IgnorePointer(
+                  ignoring: locked,
+                  child: ExcludeFocus(
+                    excluding: locked,
+                    child: _UpNextOverlay(countdown: countdown),
+                  ),
+                ),
+              if (locked)
+                _UnlockButton(shown: _lockHint, onUnlock: () => ref.read(screenLockProvider.notifier).set(false)),
             ],
           ),
         ),
@@ -358,6 +410,9 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
                     )
                   else
                     const Spacer(),
+                  // Lock screen, one tap away in fullscreen (touch screens only; a TV has nothing to lock).
+                  if (widget.fullscreen && !DeviceInfo.current.tv)
+                    _IconBtn(Symbols.lock, onTap: () => ref.read(screenLockProvider.notifier).set(true)),
                   _AutoplaySwitch(on: ref.watch(settingsProvider.select((s) => s.autoplay)), onTap: _toggleAutoplay),
                   if (info != null && info.captions.isNotEmpty)
                     _IconBtn(
@@ -684,6 +739,67 @@ class _Pill extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(14)),
     child: child,
+  );
+}
+
+/// The locked screen's unlock button, near the bottom like YouTube's: a lock in a dark circle over "Screen locked /
+/// Tap to unlock". Hidden, it takes no taps (they reach the player, which brings it back).
+class _UnlockButton extends StatelessWidget {
+  const _UnlockButton({required this.shown, required this.onUnlock});
+
+  final bool shown;
+  final VoidCallback onUnlock;
+
+  @override
+  Widget build(BuildContext context) => Positioned(
+    left: 0,
+    right: 0,
+    bottom: 24,
+    child: IgnorePointer(
+      ignoring: !shown,
+      child: AnimatedOpacity(
+        opacity: shown ? 1 : 0,
+        duration: const Duration(milliseconds: 200),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+              button: true,
+              label: 'Unlock screen',
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.6),
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onUnlock,
+                  child: const SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: Icon(Symbols.lock, size: 28, fill: 1, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: onUnlock,
+              child: const _Pill(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Screen locked',
+                      style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    Text('Tap to unlock', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 }
 

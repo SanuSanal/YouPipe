@@ -180,6 +180,11 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
       onBackButtonPressed: () async {
         if (ModalRoute.of(context)?.isCurrent == false) return false;
         if (ref.read(fullscreenProvider)) {
+          // A locked screen only shows its unlock button, like YouTube.
+          if (ref.read(screenLockProvider)) {
+            ref.read(screenLockProvider.notifier).poke();
+            return true;
+          }
           ref.read(fullscreenProvider.notifier).set(false);
           return true;
         }
@@ -364,7 +369,7 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
 
 void _noop() {}
 
-/// In fullscreen a swipe down on the video leaves it, like YouTube.
+/// In fullscreen a swipe down on the video leaves it, like YouTube (not while the screen is locked).
 class _FullscreenSwipe extends ConsumerStatefulWidget {
   const _FullscreenSwipe({required this.child});
 
@@ -378,14 +383,20 @@ class _FullscreenSwipeState extends ConsumerState<_FullscreenSwipe> {
   double _pulled = 0;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onVerticalDragStart: (_) => _pulled = 0,
-    onVerticalDragUpdate: (d) => _pulled += d.primaryDelta!,
-    onVerticalDragEnd: (d) {
-      if (_pulled > 48 || (d.primaryVelocity ?? 0) > 500) ref.read(fullscreenProvider.notifier).set(false);
-    },
-    child: widget.child,
-  );
+  Widget build(BuildContext context) {
+    // The same detector either way, so locking doesn't rebuild the player underneath.
+    final locked = ref.watch(screenLockProvider);
+    return GestureDetector(
+      onVerticalDragStart: locked ? null : (_) => _pulled = 0,
+      onVerticalDragUpdate: locked ? null : (d) => _pulled += d.primaryDelta!,
+      onVerticalDragEnd: locked
+          ? null
+          : (d) {
+              if (_pulled > 48 || (d.primaryVelocity ?? 0) > 500) ref.read(fullscreenProvider.notifier).set(false);
+            },
+      child: widget.child,
+    );
+  }
 }
 
 /// The theme's system bars, with light status bar icons over the expanded player. Flutter's `SystemUiOverlayStyle.light`
@@ -564,7 +575,10 @@ class _MiniPlayerState extends ConsumerState<_MiniPlayer> {
     setState(() => _controls = true);
     _hide?.cancel();
     _hide = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _controls = false);
+      // Like the full player, the controls stay up while paused, so the play button stays in view.
+      final remote = remoteControlsOf?.call(ref);
+      final playing = remote?.playing ?? ref.read(playerControllerProvider)?.value.isPlaying ?? false;
+      if (mounted && playing) setState(() => _controls = false);
     });
   }
 

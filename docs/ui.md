@@ -59,7 +59,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - **Bottom nav:** Home · Shorts · Subscriptions · You, with filled icons for the selected tab. Each tab is a go_router `StatefulShellBranch`, and detail pages push inside the tab.
   - **Watch panel:** one `AnimationController` (0 = mini player, 1 = watch page) morphs the video's rect between the mini player and the full player.
     - **The mini player** is YouTube's floating one: a 16:9 card with rounded corners (12), 55% of the screen width, 8 above the nav bar in the bottom-right corner. It floats over the page (the page reserves no space for it) and has a red progress line along its bottom.
-    - A tap on the card shows its controls for 3 s: expand (top left), close (top right), and previous · play/pause · next. A tap on the shown controls opens the watch page.
+    - A tap on the card shows its controls for 3 s: expand (top left), close (top right), and previous · play/pause · next. A tap on the shown controls opens the watch page. While paused they stay up, like the full player's, so the play button stays in view (before 2026-11-05 they hid after 3 s even when paused).
     - **Room at the end of pages:** while the card shows, the shell sets the pages' bottom padding to its height plus margins, so plain lists end above it and sliver pages end with `SliverBottomInset`. The last item (Settings on You, say) can always scroll clear of the card.
     - **Swipe up** on the card expands it (it follows the finger); **swipe down** closes it (it slides down and fades, then playback stops); **drag sideways** moves it between the bottom-left and bottom-right corners.
     - Drag the expanded video down to minimise; swipe it up to go fullscreen. In fullscreen, swipe down to leave.
@@ -69,7 +69,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
     - **A TV has no mini player.** When the watch page closes there (Back, the minimise arrow, or a page opened from it), playback stops.
   - **Fullscreen** switches to landscape (phones and tablets; never on a TV) and immersive mode. It follows the sensor to either side, even with rotation lock on, like YouTube (`sensorLandscape`, `SCREEN_ORIENTATION_SENSOR_LANDSCAPE`); before 2026-10-05 it used Flutter's landscapeLeft + landscapeRight, which honours the lock and stayed on one side.
   - **PiP** shows only the video.
-  - **Back order:** fullscreen → open panel (description/comments/queue) → expanded player → pages → Home → exit. On a TV, Back from the expanded player closes the video instead of shrinking it.
+  - **Back order:** a locked screen (shows the unlock button) → fullscreen → open panel (description/comments/queue) → expanded player → pages → Home → exit. On a TV, Back from the expanded player closes the video instead of shrinking it.
   - **Android 16's predictive back** asks the app up front whether it will handle Back. The shell's `PopScope` claims it whenever fullscreen, the expanded player or another tab is showing; otherwise Back would close the app instead of reaching the `BackButtonListener` (found on the Android 16 TV emulator, 2026-10-04).
 
 ## Tablets and TVs (`lib/ui/layout.dart`)
@@ -128,11 +128,12 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - **Panels open under the player** (the player keeps playing), as in YouTube.
 - **Player controls (`player_view.dart`):**
   - Tap to show; they auto-hide after 3 s.
-  - Minimise chevron, CC, Cast, settings.
+  - Minimise chevron, CC, Cast, settings; in fullscreen also the title and a lock button (not on a TV).
   - Previous / play / next.
   - Time, fullscreen, and the seek bar: red, buffered range, chapter gaps, SponsorBlock colours, and a storyboard preview with time and chapter while dragging.
   - Double-tap ±10 s with a ripple; hold for 2× speed.
-  - **Settings sheet:** Quality, Playback speed, Captions, Loop, Sleep timer.
+  - **Settings sheet:** Quality, Playback speed, Captions, Loop, Sleep timer. It scrolls, since the landscape sheet is shorter than its items.
+  - **Lock screen** (`screenLockProvider`, the lock button in the fullscreen top row, not in the settings sheet, so it's one tap away): the controls, double-tap seek, 2× hold, the Up next card and the swipe down out of fullscreen stop working. A touch or Back shows a lock button with "Screen locked / Tap to unlock" for 3 s; tapping it unlocks and shows the controls. Media keys still work. Leaving fullscreen unlocks.
 - **Shorts:**
   - A vertical pager, black, with the right rail: like, dislike, comments, share, ⋮. The rail's circles are dark (black 30 %) and its labels have a shadow, so they read over bright videos.
   - A shade at the top (as at the bottom) keeps the clock, status icons and search visible over a bright video.

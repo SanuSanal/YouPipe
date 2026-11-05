@@ -30,6 +30,7 @@
   - YouTube's Up next countdown;
   - the switch moved from Settings into the player.
 - **Gestures:** swipe up on the expanded video for fullscreen, swipe down to leave it.
+- **Lock screen in fullscreen** (2026-11-05), from a lock button in the fullscreen controls; touches and Back only show the unlock button. The settings sheet now scrolls (it overflowed in landscape).
 - **Shorts:** Back from the Shorts tab no longer leaves the Short playing behind Home.
 - **Toasts** close by themselves, including those with an action (the SponsorBlock Undo toast stayed up).
 - **SponsorBlock is off by default**; it can be turned on in Settings.

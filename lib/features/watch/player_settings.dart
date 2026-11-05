@@ -178,59 +178,62 @@ Future<void> showPlayerSettings(BuildContext context, WidgetRef ref) => showModa
       final height = c?.value.size.height.round() ?? 0;
       String sub(String s) => s;
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _SettingTile(
-              icon: Symbols.tune,
-              label: 'Quality',
-              value: sub(
-                '${_qualityLabel(svc.maxHeight, ref.read(settingsProvider).quality.maxHeight)}${height > 0 ? ' (${height}p)' : ''}',
-              ),
-              onTap: () {
-                Navigator.of(sheet).pop();
-                _showQuality(context, ref, info);
-              },
-            ),
-            _SettingTile(
-              icon: Symbols.slow_motion_video,
-              label: 'Playback speed',
-              value: (c?.value.playbackSpeed ?? 1) == 1 ? 'Normal' : '${c!.value.playbackSpeed}x',
-              onTap: () {
-                Navigator.of(sheet).pop();
-                _showSpeed(context, ref);
-              },
-            ),
-            if (info != null && info.captions.isNotEmpty)
+        // Scrolls in fullscreen, where the landscape sheet is shorter than its items.
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               _SettingTile(
-                icon: Symbols.closed_caption,
-                label: 'Captions',
-                value: caption == null ? 'Off' : caption.name,
+                icon: Symbols.tune,
+                label: 'Quality',
+                value: sub(
+                  '${_qualityLabel(svc.maxHeight, ref.read(settingsProvider).quality.maxHeight)}${height > 0 ? ' (${height}p)' : ''}',
+                ),
                 onTap: () {
                   Navigator.of(sheet).pop();
-                  _showCaptions(context, ref, info);
+                  _showQuality(context, ref, info);
                 },
               ),
-            SwitchListTile(
-              secondary: const Icon(Symbols.repeat, weight: 300),
-              title: const Text('Loop video'),
-              value: playing?.loop ?? false,
-              onChanged: (_) => ref.read(playbackProvider.notifier).toggleLoop(),
-            ),
-            _SettingTile(
-              icon: Symbols.bedtime,
-              label: 'Sleep timer',
-              value: sleep == null
-                  ? 'Off'
-                  : ref.read(sleepTimerProvider.notifier).endOfVideo
-                  ? 'End of video'
-                  : '${sleep.difference(DateTime.now()).inMinutes + 1} min',
-              onTap: () {
-                Navigator.of(sheet).pop();
-                _showSleep(context, ref);
-              },
-            ),
-          ],
+              _SettingTile(
+                icon: Symbols.slow_motion_video,
+                label: 'Playback speed',
+                value: (c?.value.playbackSpeed ?? 1) == 1 ? 'Normal' : '${c!.value.playbackSpeed}x',
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  _showSpeed(context, ref);
+                },
+              ),
+              if (info != null && info.captions.isNotEmpty)
+                _SettingTile(
+                  icon: Symbols.closed_caption,
+                  label: 'Captions',
+                  value: caption == null ? 'Off' : caption.name,
+                  onTap: () {
+                    Navigator.of(sheet).pop();
+                    _showCaptions(context, ref, info);
+                  },
+                ),
+              SwitchListTile(
+                secondary: const Icon(Symbols.repeat, weight: 300),
+                title: const Text('Loop video'),
+                value: playing?.loop ?? false,
+                onChanged: (_) => ref.read(playbackProvider.notifier).toggleLoop(),
+              ),
+              _SettingTile(
+                icon: Symbols.bedtime,
+                label: 'Sleep timer',
+                value: sleep == null
+                    ? 'Off'
+                    : ref.read(sleepTimerProvider.notifier).endOfVideo
+                    ? 'End of video'
+                    : '${sleep.difference(DateTime.now()).inMinutes + 1} min',
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  _showSleep(context, ref);
+                },
+              ),
+            ],
+          ),
         ),
       );
     },
