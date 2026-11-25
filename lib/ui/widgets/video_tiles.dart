@@ -623,7 +623,7 @@ class VideoGridSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SliverLayoutBuilder(
     builder: (context, constraints) {
-      final columns = feedColumns(constraints.crossAxisExtent);
+      final columns = feedColumns(constraints.crossAxisExtent, MediaQuery.orientationOf(context));
       if (columns == 1) {
         return SliverList.builder(itemCount: videos.length, itemBuilder: (context, i) => VideoCard(videos[i]));
       }
@@ -657,7 +657,7 @@ class VideosWithShortsSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SliverLayoutBuilder(
     builder: (context, constraints) {
-      final columns = feedColumns(constraints.crossAxisExtent);
+      final columns = feedColumns(constraints.crossAxisExtent, MediaQuery.orientationOf(context));
       final split = math.min(videos.length, columns == 1 ? phoneShelfAt : columns);
       return SliverMainAxisGroup(
         slivers: [

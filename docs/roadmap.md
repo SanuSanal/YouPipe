@@ -19,7 +19,7 @@
 | 3 | Optional Google sign-in, account feeds, sync | Yes (the user's account, 2026-10-04; account.md) |
 | 4 | Casting (Chromecast, DLNA) for video | DLNA yes (the user's TV); Chromecast not tried |
 | 4 | In-app updater, release workflow, signing, R8 release build, website (like YouPipe Music's), README, remote config | Release build runs on the phone; repo and website published 2026-10-04 (https://github.com/SanuSanal/YouPipe, https://sanusanal.github.io/YouPipe/); remote config served. First release waits for the signing secrets |
-| 6 | Tablets (rotation, 2–4 column grids, side rail, two-column watch page) and Android TV / Fire TV (launcher banner, the remote: focus ring, keys, starting focus) | Google TV emulator (Android 16) and Pixel C tablet emulator, 2026-10-04; phone unchanged. A real TV not yet |
+| 6 | Tablets (rotation, 2/3-column grids by orientation, bottom bar, two-column watch page; 2026-11-25) and Android TV / Fire TV (launcher banner, the remote: focus ring, keys, starting focus) | Google TV emulator (Android 16) and Pixel C tablet emulator, 2026-10-04; phone unchanged. A real TV not yet |
 
 ## Fixed after release (2026-10-04)
 

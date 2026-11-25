@@ -169,10 +169,12 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
     });
 
     final media = MediaQuery.of(context);
-    // Wide screens (landscape tablets, TVs) get a side rail and the two-column watch page (docs/ui.md).
+    // Wide screens (landscape tablets, TVs) get the two-column watch page; only TVs swap the bottom bar for a side
+    // rail (docs/ui.md).
     final wide = isWide(media.size);
-    final railW = wide ? YtSizes.navRailWidth : 0.0;
-    final navHeight = wide ? 0.0 : YtSizes.navBarHeight + media.padding.bottom;
+    final rail = showsSideRail(media.size);
+    final railW = rail ? YtSizes.navRailWidth : 0.0;
+    final navHeight = rail ? 0.0 : YtSizes.navBarHeight + media.padding.bottom;
     // YouTube hides the mini player on the Shorts tab; a TV has none (the video stops as the watch page closes).
     final hideMini = (tab == 1 || DeviceInfo.current.tv) && !panelExpanded;
 
@@ -208,7 +210,7 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
           resizeToAvoidBottomInset: false,
           // An invisible stand-in for the nav bar (drawn in the Stack below), so toasts float above it like YouTube's.
           extendBody: true,
-          bottomNavigationBar: fullscreen || wide ? null : IgnorePointer(child: SizedBox(height: navHeight)),
+          bottomNavigationBar: fullscreen || rail ? null : IgnorePointer(child: SizedBox(height: navHeight)),
           body: fullscreen && playing != null
               ? const ColoredBox(
                   color: Colors.black,
@@ -290,7 +292,7 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
                                     ),
                                   ),
                                 ),
-                              if (wide)
+                              if (rail)
                                 Positioned(
                                   left: -railW * t,
                                   top: 0,
@@ -770,13 +772,19 @@ class _BottomNav extends StatelessWidget {
         ),
         child: SafeArea(
           top: false,
-          child: Row(
-            children: [
-              for (var i = 0; i < _navLabels.length; i++)
-                Expanded(
-                  child: _NavItem(i: i, selected: i == index, onTap: () => onTap(i)),
-                ),
-            ],
+          // On tablets the items keep a phone's spacing, centred, like YouTube's tablet bar.
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: maxBottomNavWidth),
+              child: Row(
+                children: [
+                  for (var i = 0; i < _navLabels.length; i++)
+                    Expanded(
+                      child: _NavItem(i: i, selected: i == index, onTap: () => onTap(i)),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -784,7 +792,7 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
-/// The navigation rail on wide screens (landscape tablets, TVs), like YouTube on tablets. On a TV it makes sure
+/// The navigation rail on TVs, like YouTube for TV (tablets keep the bottom bar). It makes sure
 /// something has focus (the selected item) whenever nothing else does, so the remote's first press always lands.
 class _SideNav extends StatefulWidget {
   const _SideNav({super.key, required this.index, required this.onTap});

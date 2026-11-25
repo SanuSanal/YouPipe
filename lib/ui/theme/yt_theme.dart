@@ -103,7 +103,7 @@ abstract final class YtSizes {
   /// The mini player never grows past this on tablets and TVs.
   static const miniPlayerMaxWidth = 360.0;
 
-  /// The left navigation rail on wide screens (landscape tablets, TVs).
+  /// The left navigation rail on TVs.
   static const navRailWidth = 72.0;
 
   /// The watch page's video column on wide screens; the related list takes the rest.

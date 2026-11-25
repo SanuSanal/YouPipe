@@ -72,7 +72,7 @@ A free, ad-free YouTube client for Android, with background play, picture-in-pic
 - Cast to smart TVs (DLNA) or a Chromecast / Google TV
 
 **Phones, tablets and TVs**
-- Tablets get YouTube's tablet layout: rotation, a grid of videos, a side rail, and the video next to related videos
+- Tablets get YouTube's tablet layout: rotation, a grid of videos (2 across in portrait, 3 in landscape), the bottom bar, and the video next to related videos
 - Runs on **Android TV, Google TV and Fire TV** with the remote: it shows up on the TV home screen, the focus is always visible, and videos open fullscreen
 
 ---

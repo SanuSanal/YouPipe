@@ -79,13 +79,15 @@ Both themes follow the device setting by default (Settings → Appearance). Read
   - Tablet means a shortest side of at least 600 dp; everything else is a phone.
 - **Orientation:** phones stay portrait (fullscreen turns to landscape), tablets rotate freely, TVs are left alone (`appOrientations`).
 - **Feed grids:**
-  - `feedColumns`: 1 below 600 dp, 2 below 900, 3 below 1200, then 4. TVs always get 4 across: they report very different widths in dp, and at 6 the thumbnails were too small from the sofa (2026-10-04).
+  - `feedColumns`: 1 below 600 dp; on tablets 2 across in portrait and 3 in landscape (from 900 dp wide; a narrower landscape window keeps 2), like YouTube's tablet app (2026-11-25; before, it went by width alone, up to 4). TVs always get 4 across: they report very different widths in dp, and at 6 the thumbnails were too small from the sofa (2026-10-04).
   - `VideoGridSliver` lays videos out (on phones, today's full-width cards); `VideosWithShortsSliver` puts the Shorts shelf after the first grid row (Home, Subscriptions); `FeedSliver` turns search results and channel tabs into grids with Shorts, shelves and rows between (`feedRuns`).
   - Grid cards (`VideoCard(grid: true)`) have rounded thumbnails decoded at their cell size.
   - Channel and playlist rows in feeds, and row pages (playlist, history, downloads, settings, search suggestions, subscriptions), stay within 840 dp (`MaxContentWidth`).
   - The Shorts grids use a max cell width, so phones keep 2 and 3 across.
+- **Navigation:**
+  - Tablets keep the **bottom bar** in both orientations, like YouTube's tablet app; its four items stay within 480 dp, centred (`maxBottomNavWidth`). Before 2026-11-25 landscape tablets had the side rail.
+  - TVs get a **side rail** (`_SideNav`, 72 dp; `showsSideRail`) instead of the bottom bar, like YouTube for TV. It slides out as the player expands.
 - **Wide screens** (`isWide`: landscape and at least 900 dp, so landscape tablets and TVs):
-  - A **side rail** (`_SideNav`, 72 dp) replaces the bottom bar and slides out as the player expands.
   - The **watch page** has two columns: the video (64% of the width) with the details under it, and the related list as compact rows on the right. The Description, Comments and Queue panels open in the right column instead of over the details.
   - **Shorts** play in a centred 9:16 column instead of a cropped band.
 - **The mini player** is capped at 360 dp wide.

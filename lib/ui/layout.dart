@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-/// What the app runs on (docs/ui.md). Phones keep the portrait YouTube layout; tablets and TVs get grids, the side
-/// rail and the two-column watch page on wide screens; TVs are also driven by the remote.
+/// What the app runs on (docs/ui.md). Phones keep the portrait YouTube layout; tablets and TVs get grids and the
+/// two-column watch page on wide screens; TVs also get the side rail and are driven by the remote.
 enum FormFactor { phone, tablet, tv }
 
 /// Facts from the platform, read once at startup (`youpipe/system` → `device`).
@@ -43,22 +43,24 @@ FormFactor formFactorAtStartup() {
   return size.shortestSide >= 600 ? FormFactor.tablet : FormFactor.phone;
 }
 
-/// How many video cards fit side by side, like YouTube on tablets: 1 on phones, then 2, 3 and 4. TVs, watched from
-/// the sofa like YouTube for TV, always show 4 (TVs report very different widths in dp, and more columns made the
-/// thumbnails too small to read from the sofa).
-int feedColumns(double width) {
+/// How many video cards fit side by side, like YouTube on tablets: 1 on phones, 2 on a portrait tablet and 3 on a
+/// landscape one (at least 900 dp wide; a narrower landscape window keeps 2). TVs, watched from the sofa like YouTube
+/// for TV, always show 4 (TVs report very different widths in dp, and more columns made the thumbnails too small to
+/// read from the sofa).
+int feedColumns(double width, Orientation orientation) {
   if (DeviceInfo.current.tv) return 4;
-  return width < 600
-      ? 1
-      : width < 900
-      ? 2
-      : width < 1200
-      ? 3
-      : 4;
+  if (width < 600) return 1;
+  return orientation == Orientation.landscape && width >= 900 ? 3 : 2;
 }
 
-/// Wide enough for the side rail and the two-column watch page (landscape tablets, TVs).
+/// Wide enough for the two-column watch page (landscape tablets, TVs).
 bool isWide(Size size) => size.width >= 900 && size.width > size.height;
+
+/// The side rail replaces the bottom bar on TVs only (YouTube for TV); tablets keep the bottom bar, like YouTube.
+bool showsSideRail(Size size) => DeviceInfo.current.tv && isWide(size);
+
+/// The bottom bar's items stay within this width, centred, on tablets (YouTube's tablet bar).
+const maxBottomNavWidth = 480.0;
 
 /// The widest a list of rows (playlist, history, settings) gets before it's centred.
 const maxRowContentWidth = 840.0;
