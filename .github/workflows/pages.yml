@@ -19,12 +19,11 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+# Upload and deploy are separate jobs, as GitHub's Pages docs set them up. In one job, deploy-pages asked for the
+# artifact about a second after the upload and often found none ("No artifacts named github-pages"; docs/site.md).
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -37,6 +36,13 @@ jobs:
         with:
           path: site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
