@@ -55,6 +55,7 @@ A free, ad-free YouTube client for Android, with background play, picture-in-pic
 - Skip sponsor segments, intros and reminders automatically (via [SponsorBlock](https://sponsor.ajay.app); off by default, turn it on in Settings)
 - Dislike counts are back (via [Return YouTube Dislike](https://returnyoutubedislike.com))
 - Double-tap to seek, hold for 2× speed, playback speed, loop and sleep timer
+- Lock the screen in fullscreen so stray touches don't interrupt the video; the volume buttons still work
 
 **Look & feel**
 - A familiar interface modelled on the YouTube Android app, so there's nothing new to learn
