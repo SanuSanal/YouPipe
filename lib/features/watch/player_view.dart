@@ -142,6 +142,20 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
     _scheduleHide();
   }
 
+  /// The keys a locked screen keeps to itself (they'd otherwise move focus or press a control).
+  static final _lockedKeys = {
+    LogicalKeyboardKey.select,
+    LogicalKeyboardKey.enter,
+    LogicalKeyboardKey.numpadEnter,
+    LogicalKeyboardKey.space,
+    LogicalKeyboardKey.gameButtonA,
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+    LogicalKeyboardKey.tab,
+  };
+
   /// The remote and keyboards (docs/ui.md). Media keys always work. While the player itself has focus (controls
   /// hidden): Select shows the controls, Left/Right seek 10 s, Up (and Down in fullscreen) show the controls; Down
   /// on the watch page moves on to the details. While a control has focus, any key keeps the controls up.
@@ -161,10 +175,13 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
       _seekStep(key == LogicalKeyboardKey.mediaFastForward ? 1 : -1);
       return KeyEventResult.handled;
     }
-    // A locked screen: other keys just bring up the unlock button (Back is the shell's, see app_shell.dart).
+    // A locked screen: the remote's and keyboard's keys just bring up the unlock button (Back is the shell's, see
+    // app_shell.dart). Every other key goes on to Android: a handled key never reaches it, so claiming them all
+    // silenced the volume buttons (reported 2026-11-25).
     if (_locked) {
-      if (node.hasPrimaryFocus) _showLockHint();
-      return node.hasPrimaryFocus ? KeyEventResult.handled : KeyEventResult.ignored;
+      if (!node.hasPrimaryFocus || !_lockedKeys.contains(key)) return KeyEventResult.ignored;
+      _showLockHint();
+      return KeyEventResult.handled;
     }
     if (!node.hasPrimaryFocus) {
       if (_visible) _scheduleHide();
