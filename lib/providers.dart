@@ -359,13 +359,23 @@ class PlaybackController extends Notifier<NowPlaying?> {
   }
 
   Future<void> _onCompleted(String videoId) async {
-    final s = state;
-    if (s == null || s.video.id != videoId) return;
-    final c = _svc.controller.value;
-    if (c != null && ref.read(settingsProvider).saveHistory) {
-      await _library.savePosition(videoId, c.value.duration, c.value.duration);
+    // The "end of video" sleep timer stops here, before the queue or Autoplay go on.
+    final sleep = _svc.stopAtEnd;
+    _svc.stopAtEnd = false;
+    try {
+      final s = state;
+      if (s == null || s.video.id != videoId) return;
+      final c = _svc.controller.value;
+      if (c != null && ref.read(settingsProvider).saveHistory) {
+        await _library.savePosition(videoId, c.value.duration, c.value.duration);
+      }
+      if (sleep) return;
+      await next(force: false);
+    } finally {
+      // The media session stayed "playing" across the end of the video, so a next video started in the background
+      // keeps the foreground service. Nothing followed: let it go (an Up next countdown keeps it until it runs out).
+      if (ref.read(upNextCountdownProvider) == null) _svc.releaseEndHold();
     }
-    await next(force: false);
   }
 
   Future<void> stop() async {

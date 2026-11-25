@@ -137,6 +137,8 @@ class SleepTimerController extends Notifier<DateTime?> {
   void set(Duration? d) {
     _timer?.cancel();
     endOfVideo = d == Duration.zero;
+    // Autoplay mustn't start the next video when the sleep timer ends this one.
+    ref.read(playerServiceProvider).stopAtEnd = endOfVideo;
     if (d == null) {
       state = null;
       return;
@@ -148,7 +150,7 @@ class SleepTimerController extends Notifier<DateTime?> {
       sub = svc.completed.listen((_) {
         sub.cancel();
         if (endOfVideo) {
-          svc.controller.value?.pause();
+          svc.pause();
           state = null;
         }
       });
@@ -156,7 +158,7 @@ class SleepTimerController extends Notifier<DateTime?> {
     }
     state = DateTime.now().add(d);
     _timer = Timer(d, () {
-      ref.read(playerServiceProvider).controller.value?.pause();
+      ref.read(playerServiceProvider).pause();
       state = null;
     });
   }
@@ -168,13 +170,15 @@ Future<void> showPlayerSettings(BuildContext context, WidgetRef ref) => showModa
   context: context,
   useRootNavigator: true,
   builder: (sheet) => Consumer(
-    builder: (sheet, ref, _) {
-      final c = ref.watch(playerControllerProvider);
-      final info = ref.watch(currentInfoProvider);
-      final svc = ref.read(playerServiceProvider);
-      final caption = ref.watch(captionsProvider);
-      final playing = ref.watch(playbackProvider);
-      final sleep = ref.watch(sleepTimerProvider);
+    // `live` only draws the sheet: it's disposed with the sheet, so the choices (which act after it has closed) use
+    // the player's [ref]. With the sheet's own ref the sleep timer and captions choices threw and did nothing.
+    builder: (sheet, live, _) {
+      final c = live.watch(playerControllerProvider);
+      final info = live.watch(currentInfoProvider);
+      final svc = live.read(playerServiceProvider);
+      final caption = live.watch(captionsProvider);
+      final playing = live.watch(playbackProvider);
+      final sleep = live.watch(sleepTimerProvider);
       final height = c?.value.size.height.round() ?? 0;
       String sub(String s) => s;
       return SafeArea(
@@ -187,7 +191,7 @@ Future<void> showPlayerSettings(BuildContext context, WidgetRef ref) => showModa
                 icon: Symbols.tune,
                 label: 'Quality',
                 value: sub(
-                  '${_qualityLabel(svc.maxHeight, ref.read(settingsProvider).quality.maxHeight)}${height > 0 ? ' (${height}p)' : ''}',
+                  '${_qualityLabel(svc.maxHeight, live.read(settingsProvider).quality.maxHeight)}${height > 0 ? ' (${height}p)' : ''}',
                 ),
                 onTap: () {
                   Navigator.of(sheet).pop();
@@ -224,7 +228,7 @@ Future<void> showPlayerSettings(BuildContext context, WidgetRef ref) => showModa
                 label: 'Sleep timer',
                 value: sleep == null
                     ? 'Off'
-                    : ref.read(sleepTimerProvider.notifier).endOfVideo
+                    : live.read(sleepTimerProvider.notifier).endOfVideo
                     ? 'End of video'
                     : '${sleep.difference(DateTime.now()).inMinutes + 1} min',
                 onTap: () {

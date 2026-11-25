@@ -41,6 +41,10 @@
   - the remote can move through and past Settings' video quality rows, and reach the results page's search field (2026-10-05).
 - **Media notification and lock-screen controls** were missing from release builds (2026-10-05). Resource shrinking removed the icons that audio_service looks up by name, so the media session never updated. `res/raw/keep.xml` now keeps them (release.md). Stop or closing the mini player mid-play also left a stale notification, and notification Stop now closes the video (playback.md).
 - **Swiping the app away in Recents, or closing the PiP window,** left the video playing; both now stop it, like YouTube (2026-10-06, playback.md).
+- **Screen-off playback stopped after a few minutes** (2026-11-25). A rebuffer was reported to the media session as a pause, which released the foreground service and wakelock, and Android 12+ doesn't give them back to a backgrounded app. The session now follows the video's intent to play, through rebuffers, recoveries and autoplay (playback.md, "The session's playing state"). On the Moto edge 20 it then played 12.5 min with the screen off (charging), and 9 min more in forced deep Doze with the battery reported unplugged (`dumpsys battery unplug`, `dumpsys deviceidle force-idle`), with the foreground service up throughout.
+- **The fullscreen lock silenced the volume buttons** (2026-11-25); it now holds back only the navigation keys (ui.md).
+- **The "end of video" sleep timer** let Autoplay start the next video (2026-11-25); it now stops at the end (playback.md).
+- **The sleep timer and captions choices did nothing** (2026-11-25): the player settings sheet used its own ref after closing (playback.md).
 
 ## Next
 

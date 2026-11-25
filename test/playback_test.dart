@@ -1,6 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:video_player/video_player.dart';
 import 'package:youpipe/data/video_info.dart';
 import 'package:youpipe/innertube/models.dart';
 import 'package:youpipe/player/video_player_service.dart';
@@ -56,6 +57,31 @@ void main() {
       expect(played, 1);
       await tester.pump(const Duration(seconds: 10));
       expect(played, 1);
+    });
+  });
+
+  group('play intent', () {
+    // With the screen off, reporting a rebuffer as a pause dropped the foreground service, and Android 12+ doesn't
+    // give it back to a backgrounded app: playback stopped a few minutes in.
+    const d = Duration(minutes: 5);
+    final playing = VideoPlayerValue(duration: d, isInitialized: true, isPlaying: true);
+    final buffering = VideoPlayerValue(duration: d, isInitialized: true, isBuffering: true);
+    final paused = VideoPlayerValue(duration: d, isInitialized: true);
+
+    test('a rebuffer keeps a playing video playing', () {
+      expect(VideoPlayerService.intendsToPlay(playing, before: false), isTrue);
+      expect(VideoPlayerService.intendsToPlay(buffering, before: true), isTrue);
+      expect(VideoPlayerService.intendsToPlay(buffering, before: false), isFalse);
+    });
+
+    test('a pause, an error or the end stops it', () {
+      expect(VideoPlayerService.intendsToPlay(paused, before: true), isFalse);
+      expect(VideoPlayerService.intendsToPlay(playing.copyWith(isCompleted: true), before: true), isFalse);
+      expect(VideoPlayerService.intendsToPlay(VideoPlayerValue.erroneous('boom'), before: true), isFalse);
+    });
+
+    test('nothing loaded is not playing', () {
+      expect(VideoPlayerService(VideoInfoService()).sessionPlaying, isFalse);
     });
   });
 

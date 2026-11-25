@@ -48,3 +48,5 @@ flutter test --tags live --run-skipped   # hits the real InnerTube API (smoke te
 - **Raise the logcat buffer** (`adb logcat -G 16M`) before a full suite run, or early results rotate out.
 - **Read results from the device.** Stream URLs are bound to the phone's IP, so they can't be replayed from the PC.
 - **Screenshots:** stay inside the app; don't capture the user's home screen.
+- **Screen-off playback:** play a long video, `input keyevent KEYCODE_SLEEP`, then sample every 30 s: `dumpsys media_session` (state 3 = playing, position, buffered position) and `dumpsys activity services com.youpipe.app` (`isForeground=true`). USB charging keeps the phone out of deep Doze, so also run it with `dumpsys battery unplug` and `dumpsys deviceidle force-idle`, and undo both afterwards (`dumpsys deviceidle unforce`, `dumpsys battery reset`).
+- **Tapping player controls:** they hide 3 s after showing, so tap the video once to show them, then the control.

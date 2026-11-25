@@ -43,7 +43,8 @@
   - The chosen language carries over to the next videos (`captionLang`); the manual track is preferred over the auto-generated one.
 - **Chapters and storyboards** come from video info. The seek bar shows chapter gaps, and the storyboard frame and chapter title while dragging.
 - **Speed:** 0.25–2×. Hold the video for 2× while held.
-- **Sleep timer:** 10–60 min, or the end of the video.
+- **Sleep timer:** 10–60 min, or the end of the video. "End of video" sets `VideoPlayerService.stopAtEnd`, and `PlaybackController._onCompleted` then stops there instead of going on to the queue or Autoplay (until 2026-11-25 the next video started anyway). Pauses go through `VideoPlayerService.pause()`.
+- **The player settings sheet** (`showPlayerSettings`) draws with its own `Consumer` ref, but its choices (quality, speed, captions, sleep timer) act with the player's ref: they run after the sheet has closed, when the sheet's ref is disposed. Until 2026-11-25 the sleep timer and captions choices threw there and did nothing.
 - **Loop:** `setLooping`.
 - **SponsorBlock:**
   - **Off by default** (`sb_enabled`, since 2026-10-04): skipping changes how videos play compared with YouTube, so the user turns it on in Settings → SponsorBlock ("Skip sponsors and more"). While it's off nothing is fetched and the seek bar has no segment colours.
@@ -56,14 +57,20 @@
   - The window then shows only the video. The app root draws it (`MaterialApp.router` `builder` in `main.dart`) above every route, with the pages kept mounted but offstage, so it covers Settings and sign-in too. Those open above the shell, and before 2026-10-04 PiP from Settings showed the Settings page.
 - **Fullscreen:** `fullscreenProvider`. The shell switches to immersive mode (plus landscape on phones and tablets) and shows `PlayerView(fullscreen: true)`. On a TV a picked video starts fullscreen (`playVideo`).
   - Swipe up on the expanded video to enter it, swipe down in fullscreen to leave (more than 48 dp or a fling), like YouTube.
-  - **Lock screen** (the lock button in the fullscreen controls): `screenLockProvider` blocks touches and Back until the user taps the unlock button; it resets whenever fullscreen changes (docs/ui.md).
-- **Staying awake:** while a video plays (not paused, ended or failed), `VideoPlayerService` tells `youpipe/system` → `playing`:
+  - **Lock screen** (the lock button in the fullscreen controls): `screenLockProvider` blocks touches, Back and the navigation keys until the user taps the unlock button; the volume buttons keep working. It resets whenever fullscreen changes (docs/ui.md).
+- **Staying awake:** while the session plays (`sessionPlaying`, see "The session's playing state" below), `VideoPlayerService` tells `youpipe/system` → `playing`:
   - the activity keeps the screen on (`FLAG_KEEP_SCREEN_ON`), which only matters while the app is visible: the watch page, fullscreen, the mini player or PiP;
   - a Wi-Fi lock (`WIFI_MODE_FULL_HIGH_PERF`, what ExoPlayer's `WAKE_MODE_NETWORK` uses) keeps Wi-Fi out of power save with the screen off. audio_service already holds the CPU wakelock while playing, but video_player's ExoPlayer holds no Wi-Fi lock.
 - **Remote and keyboard keys:** see docs/ui.md, "The TV remote".
 - **Background:**
   - `VideoPlayerOptions(allowBackgroundPlayback: true)` plus the audio_service foreground service.
   - Tested for 11 minutes screen-off in Phase 0.
+  - **The session's playing state** (`VideoPlayerService.sessionPlaying`) drives the media session, the screen-on flag and the Wi-Fi lock. It follows the video's intent to play, not ExoPlayer's `isPlaying`:
+    - **Why:** audio_service leaves the foreground and drops its CPU wakelock as soon as the session reports "not playing", and Android 12+ won't let a backgrounded app start a foreground service again. ExoPlayer reports "not playing" on every rebuffer (`onIsPlayingChanged`, which video_player forwards). So with the screen off, the first rebuffer released the foreground service, the wakelock and the Wi-Fi lock, and the video stopped a few minutes in until the app was reopened (reported 2026-11-25). With the screen on the app is in front and can start it again, so it never showed.
+    - **A rebuffer** keeps the earlier answer (`intendsToPlay`). A drop to "not playing" waits 1 s, because when buffering ends the ready state arrives just before "playing".
+    - **Loading** with autoplay (the next video, a recovery, a quality change) counts as playing (`_opening`), so the session goes straight from one video to the next.
+    - **The end of a video** holds the session for up to 30 s (`_endHold`). `PlaybackController._onCompleted` releases it once nothing follows (Autoplay off, no related video); an Up next countdown keeps it until the countdown ends or the hold runs out.
+    - **A real pause** from the notification, the headset or the sleep timer goes through `VideoPlayerService.pause()` and counts at once. A failure that shows its error ends the session's playing (`YouPipeAudioHandler.failed`).
   - **Swiping the app away in Recents stops the video**, like YouTube (`YouPipeAudioHandler.onTaskRemoved` runs the notification's Stop). audio_service's default does nothing there, so the foreground service kept it playing (reported 2026-10-06). Leaving with Home keeps it playing in the background.
   - **Closing the PiP window stops the video too.** Android only stops the activity then (the task stays, so `onTaskRemoved` doesn't fire). `MainActivity.onPictureInPictureModeChanged` tells it apart from expanding the window by the lifecycle (stopped, not started) and sends `closed` on `youpipe/pip`; `Pip.onClosed` runs the same Stop (found 2026-10-06).
 

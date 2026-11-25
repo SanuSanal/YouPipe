@@ -44,6 +44,9 @@ class VideoPlayerService {
   final _completed = StreamController<String>.broadcast();
   Stream<String> get completed => _completed.stream;
 
+  /// The sleep timer ends with this video: autoplay and the queue don't go on (the playback controller clears it).
+  bool stopAtEnd = false;
+
   /// A downloaded copy of a video, played instead of streaming (set by the download manager).
   LocalVideo? Function(String videoId)? localVideo;
 
@@ -83,6 +86,86 @@ class VideoPlayerService {
     return spent < maxRecoveries ? spent + 1 : null;
   }
 
+  /// Whether the current video means to play. ExoPlayer reports "not playing" while it rebuffers, and an error or
+  /// the end of a video does too, but the media session must stay "playing" through those gaps (see [_report]).
+  bool _intent = false;
+
+  /// A drop of [_intent] waits a moment: when buffering ends, the ready state arrives just before "playing" again.
+  Timer? _settle;
+  static const _settleDelay = Duration(seconds: 1);
+
+  /// A video is loading to autoplay (a new video, a recovery, a quality change).
+  bool _opening = false;
+
+  /// A video just ended and the next may follow; released by the playback controller or after [_endHoldLimit].
+  Timer? _endHold;
+  static const _endHoldLimit = Duration(seconds: 30);
+
+  /// What the media session should report: the video plays, or is between two plays of the same session.
+  @visibleForTesting
+  bool get sessionPlaying => _opening || _endHold != null || _intent;
+
+  /// Whether [v] means to play, given whether it did before. A rebuffer keeps the earlier answer.
+  @visibleForTesting
+  static bool intendsToPlay(VideoPlayerValue v, {required bool before}) {
+    if (v.hasError || v.isCompleted) return false;
+    if (v.isPlaying) return true;
+    return v.isBuffering && before;
+  }
+
+  /// Pushes [sessionPlaying] to the media session and the keep-awake locks.
+  ///
+  /// audio_service leaves the foreground and drops its CPU wakelock as soon as the session stops "playing", and
+  /// Android 12+ doesn't let a backgrounded app go back to the foreground. So with the screen off, the first rebuffer
+  /// (or recovery, or autoplay of the next video) used to end playback for good a few minutes in (reported
+  /// 2026-11-25).
+  void _report() {
+    final playing = sessionPlaying;
+    _keepAwake(playing);
+    final c = controller.value;
+    final i = info.value;
+    if (c != null && i != null) handler?.sync(c, i, playing: playing);
+  }
+
+  void _updateIntent(VideoPlayerController c, int load) {
+    if (intendsToPlay(c.value, before: _intent)) {
+      _settle?.cancel();
+      _settle = null;
+      _intent = true;
+    } else if (_intent && _settle == null) {
+      _settle = Timer(_settleDelay, () {
+        _settle = null;
+        if (load != _loads || intendsToPlay(c.value, before: true)) return;
+        _intent = false;
+        _report();
+      });
+    }
+  }
+
+  void _clearHolds() {
+    _settle?.cancel();
+    _settle = null;
+    _endHold?.cancel();
+    _endHold = null;
+    _intent = false;
+    _opening = false;
+  }
+
+  /// The video ended and nothing follows straight away (no autoplay, or an Up next countdown that was cancelled).
+  void releaseEndHold() {
+    if (_endHold == null) return;
+    _endHold!.cancel();
+    _endHold = null;
+    _report();
+  }
+
+  /// Pauses at once (the notification, the sleep timer), without waiting for a rebuffer to end.
+  Future<void> pause() async {
+    _clearHolds();
+    await controller.value?.pause();
+    _report();
+  }
+
   static const _system = MethodChannel('youpipe/system');
   bool _awake = false;
 
@@ -113,6 +196,12 @@ class VideoPlayerService {
     _failure = null;
     videoId.value = id;
     if (!recovering) info.value = null;
+    // The session keeps "playing" while the video loads, so a video started in the background (autoplay, a
+    // recovery) keeps the foreground service.
+    final wasPlaying = sessionPlaying;
+    _clearHolds();
+    _opening = autoplay;
+    if (autoplay && wasPlaying) handler?.waiting();
     await _release();
     try {
       final sw = Stopwatch()..start();
@@ -140,8 +229,6 @@ class VideoPlayerService {
       c.addListener(() {
         if (load != _loads) return;
         final v = c.value;
-        handler?.sync(c, i);
-        _keepAwake(v.isPlaying && !v.isCompleted && !v.hasError);
         if (!v.hasError && v.isInitialized) {
           if (v.position > Duration.zero) lastPosition = v.position;
           lastSpeed = v.playbackSpeed;
@@ -157,6 +244,7 @@ class VideoPlayerService {
             '${next == null ? 'giving up after $recoveries re-resolves' : 're-resolving ($next/$maxRecoveries)'}',
           );
           if (next != null) {
+            // The re-open keeps the session playing meanwhile (see open).
             unawaited(_recover(id, at, lastSpeed, next));
           } else {
             _showError(VideoUnavailable('PLAYBACK_FAILED', v.errorDescription ?? 'Playback failed'));
@@ -165,18 +253,31 @@ class VideoPlayerService {
         }
         if (v.isCompleted && !finished && !v.isLooping) {
           finished = true;
+          // Bridge the gap to the next video; the playback controller releases it when nothing follows.
+          if (_intent || _opening) {
+            _endHold?.cancel();
+            _endHold = Timer(_endHoldLimit, releaseEndHold);
+          }
           _completed.add(id);
         } else if (!v.isCompleted) {
           finished = false;
         }
+        _updateIntent(c, load);
+        _report();
       });
-      handler?.sync(c, i);
+      _report();
       if (speed != 1) await c.setPlaybackSpeed(speed);
       if (start > Duration.zero) await c.seekTo(start);
       if (autoplay) await c.play();
+      if (load == _loads) {
+        _opening = false;
+        _updateIntent(c, load);
+        _report();
+      }
       return true;
     } catch (e) {
       if (load == _loads) {
+        _opening = false;
         _failure = (load, e);
         // A recovery decides itself whether to show the error or wait for the network.
         if (!recovering) _showError(e);
@@ -188,7 +289,9 @@ class VideoPlayerService {
 
   void _showError(Object e) {
     error.value = e;
+    _clearHolds();
     _keepAwake(false);
+    handler?.failed();
   }
 
   /// Re-opens [id] at [at] after a mid-play failure. While the device is offline it keeps the video loading and
@@ -284,7 +387,8 @@ class VideoPlayerService {
       id,
       maxHeight: height,
       start: c?.value.position ?? Duration.zero,
-      autoplay: c?.value.isPlaying ?? true,
+      // A rebuffer reports "not playing", but the video means to play.
+      autoplay: c == null || c.value.isPlaying || _intent,
       speed: c?.value.playbackSpeed ?? 1,
     );
   }
@@ -301,6 +405,7 @@ class VideoPlayerService {
     info.value = null;
     videoId.value = null;
     error.value = null;
+    _clearHolds();
     _keepAwake(false);
     await _release();
     await handler?.cleared();
@@ -317,7 +422,9 @@ class YouPipeAudioHandler extends BaseAudioHandler with SeekHandler {
 
   VideoPlayerController? get _c => service.controller.value;
 
-  void sync(VideoPlayerController c, VideoInfo info) {
+  /// Mirrors [c]; [playing] is the session's state ([VideoPlayerService.sessionPlaying]), which stays on through
+  /// rebuffers and the gaps between videos.
+  void sync(VideoPlayerController c, VideoInfo info, {required bool playing}) {
     final v = c.value;
     if (_itemId != info.videoId || (mediaItem.value?.duration == null && v.duration > Duration.zero && !info.isLive)) {
       _itemId = info.videoId;
@@ -343,7 +450,6 @@ class YouPipeAudioHandler extends BaseAudioHandler with SeekHandler {
     } else {
       state = AudioProcessingState.ready;
     }
-    final playing = v.isPlaying && !v.isCompleted;
     final old = playbackState.value;
     // The listener fires many times a second; only push real changes plus a position update every second.
     if (old.playing == playing &&
@@ -376,6 +482,11 @@ class YouPipeAudioHandler extends BaseAudioHandler with SeekHandler {
     playbackState.add(playbackState.value.copyWith(playing: true, processingState: AudioProcessingState.buffering));
   }
 
+  /// The video couldn't be played (its error shows in the app): the session stops "playing".
+  void failed() {
+    playbackState.add(playbackState.value.copyWith(playing: false, processingState: AudioProcessingState.error));
+  }
+
   /// Nothing is playing any more: ends the session and removes the notification.
   Future<void> cleared() async {
     _itemId = null;
@@ -398,7 +509,7 @@ class YouPipeAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> play() async => _c?.play();
 
   @override
-  Future<void> pause() async => _c?.pause();
+  Future<void> pause() => service.pause();
 
   @override
   Future<void> seek(Duration position) async => _c?.seekTo(position);
