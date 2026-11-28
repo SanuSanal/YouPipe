@@ -45,6 +45,7 @@
 - **The fullscreen lock silenced the volume buttons** (2026-11-25); it now holds back only the navigation keys (ui.md).
 - **The "end of video" sleep timer** let Autoplay start the next video (2026-11-25); it now stops at the end (playback.md).
 - **The sleep timer and captions choices did nothing** (2026-11-25): the player settings sheet used its own ref after closing (playback.md).
+- **The PiP window had no previous, play/pause or next buttons on vivo/iQOO** (2026-11-28). Stock Android (the Moto) builds them from the media session, but OriginOS doesn't. The app now gives its own (playback.md). Checked on the iQOO (I2405, Android 16): the buttons show, and pause, play and next work.
 
 ## Next
 

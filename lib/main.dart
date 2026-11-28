@@ -50,6 +50,16 @@ Future<void> main() async {
   final player = VideoPlayerService(infos);
   // Closing the PiP window stops the video, like the notification's Stop (docs/playback.md).
   Pip.instance.onClosed = () => player.handler?.stop();
+  // The PiP window's buttons run like the notification's.
+  Pip.instance.onAction = (action) {
+    final h = player.handler;
+    if (h == null) return;
+    unawaited(switch (action) {
+      'previous' => h.skipToPrevious(),
+      'next' => h.skipToNext(),
+      _ => h.playbackState.value.playing ? h.pause() : h.play(),
+    });
+  };
   // The media session isn't needed until something plays, so it doesn't hold up the first frame (~110 ms).
   unawaited(() async {
     player.handler = await AudioService.init(

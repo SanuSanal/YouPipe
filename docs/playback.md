@@ -54,6 +54,7 @@
 - **PiP:**
   - Armed while a video plays (if enabled), only when the play state or shape changes. Never on devices without the PiP feature (most TVs, Fire TV): `SystemChannel.supportsPip`.
   - Android 12+ enters automatically on Home; older versions enter from `onUserLeaveHint`.
+  - **The window's buttons:** previous, play/pause and next, like YouTube's. `MainActivity.actions()` gives them to Android as `RemoteAction`s (`res/drawable/ic_pip_*.xml`). Their broadcasts come back to a not-exported receiver, which sends `action` on `youpipe/pip`; `Pip.onAction` (main.dart) runs the media session's previous, play/pause and next. `arm` carries `playing`, which picks play or pause. Stock Android makes these buttons from the media session when an app gives none, so the Moto had them without this. vivo's OriginOS (iQOO, Android 16) showed only settings and fullscreen (fixed 2026-11-28).
   - The window then shows only the video. The app root draws it (`MaterialApp.router` `builder` in `main.dart`) above every route, with the pages kept mounted but offstage, so it covers Settings and sign-in too. Those open above the shell, and before 2026-10-04 PiP from Settings showed the Settings page.
 - **Fullscreen:** `fullscreenProvider`. The shell switches to immersive mode (plus landscape on phones and tablets) and shows `PlayerView(fullscreen: true)`. On a TV a picked video starts fullscreen (`playVideo`).
   - Swipe up on the expanded video to enter it, swipe down in fullscreen to leave (more than 48 dp or a fling), like YouTube.

@@ -552,6 +552,8 @@ class Pip {
           active.value = call.arguments == true;
         case 'closed':
           onClosed?.call();
+        case 'action':
+          onAction?.call(call.arguments as String);
       }
     });
   }
@@ -565,11 +567,14 @@ class Pip {
   /// The PiP window was closed (not expanded back into the app); set in main.dart to stop the video.
   VoidCallback? onClosed;
 
-  Future<void> arm(bool enabled, {Size aspect = const Size(16, 9)}) => _channel.invokeMethod('arm', {
-    'enabled': enabled,
-    'width': aspect.width.round(),
-    'height': aspect.height.round(),
-  });
+  /// A button in the PiP window: `previous`, `toggle` (play/pause) or `next`; set in main.dart.
+  void Function(String action)? onAction;
+
+  /// [playing] picks the PiP window's play or pause button.
+  Future<void> arm(bool enabled, {required bool playing, Size aspect = const Size(16, 9)}) => _channel.invokeMethod(
+    'arm',
+    {'enabled': enabled, 'playing': playing, 'width': aspect.width.round(), 'height': aspect.height.round()},
+  );
 
   Future<bool> enter() async => await _channel.invokeMethod<bool>('enter') ?? false;
 }

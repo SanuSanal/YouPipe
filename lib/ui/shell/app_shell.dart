@@ -351,7 +351,8 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
       if (on == _pipArmed && aspect == _pipAspect) return;
       _pipArmed = on;
       _pipAspect = aspect;
-      Pip.instance.arm(on, aspect: aspect);
+      // Armed exactly while the video plays (with PiP on), which also picks the window's play/pause button.
+      Pip.instance.arm(on, playing: on, aspect: aspect);
     }
 
     if (!ref.read(settingsProvider).pip || c == null) {
