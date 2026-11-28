@@ -570,11 +570,15 @@ class Pip {
   /// A button in the PiP window: `previous`, `toggle` (play/pause) or `next`; set in main.dart.
   void Function(String action)? onAction;
 
-  /// [playing] picks the PiP window's play or pause button.
-  Future<void> arm(bool enabled, {required bool playing, Size aspect = const Size(16, 9)}) => _channel.invokeMethod(
-    'arm',
-    {'enabled': enabled, 'playing': playing, 'width': aspect.width.round(), 'height': aspect.height.round()},
-  );
+  /// [playing] picks the PiP window's play or pause button; without [hasPrevious] its Previous is disabled.
+  Future<void> arm(bool enabled, {required bool playing, required bool hasPrevious, Size aspect = const Size(16, 9)}) =>
+      _channel.invokeMethod('arm', {
+        'enabled': enabled,
+        'playing': playing,
+        'hasPrevious': hasPrevious,
+        'width': aspect.width.round(),
+        'height': aspect.height.round(),
+      });
 
   Future<bool> enter() async => await _channel.invokeMethod<bool>('enter') ?? false;
 }

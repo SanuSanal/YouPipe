@@ -166,6 +166,9 @@ class NowPlaying {
 
   bool get hasNextInQueue => index + 1 < queue.length;
 
+  /// A video to go back to. Without one the Previous buttons are disabled, like YouTube's.
+  bool get hasPrevious => index > 0;
+
   NowPlaying copyWith({VideoItem? video, List<VideoItem>? queue, int? index, bool? loop}) => NowPlaying(
     video: video ?? this.video,
     queue: queue ?? this.queue,

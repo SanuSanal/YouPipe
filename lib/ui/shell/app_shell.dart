@@ -157,6 +157,8 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
     ref.listen(fullscreenProvider, (_, on) => _setFullscreen(on));
     // Arm picture-in-picture while a video plays (leaving the app then shrinks it into a window).
     ref.listen(playerControllerProvider, (_, c) => _armPip(c));
+    // The PiP window's Previous is disabled without a video to go back to.
+    ref.listen(playbackProvider.select((s) => s?.hasPrevious ?? false), (_, _) => _sendPip());
 
     final playing = ref.watch(playbackProvider);
     final fullscreen = ref.watch(fullscreenProvider);
@@ -346,13 +348,22 @@ class _AppShellState extends ConsumerState<AppShell> with TickerProviderStateMix
   bool? _pipArmed;
   Size? _pipAspect;
 
+  /// Tells Android the PiP state. Armed exactly while the video plays (with PiP on), which also picks the window's
+  /// play/pause button.
+  void _sendPip() {
+    final on = _pipArmed;
+    final aspect = _pipAspect;
+    if (on == null || aspect == null) return;
+    final hasPrevious = ref.read(playbackProvider)?.hasPrevious ?? false;
+    Pip.instance.arm(on, playing: on, hasPrevious: hasPrevious, aspect: aspect);
+  }
+
   void _armPip(VideoPlayerController? c) {
     void arm(bool on, Size aspect) {
       if (on == _pipArmed && aspect == _pipAspect) return;
       _pipArmed = on;
       _pipAspect = aspect;
-      // Armed exactly while the video plays (with PiP on), which also picks the window's play/pause button.
-      Pip.instance.arm(on, playing: on, aspect: aspect);
+      _sendPip();
     }
 
     if (!ref.read(settingsProvider).pip || c == null) {
@@ -590,15 +601,20 @@ class _MiniPlayerState extends ConsumerState<_MiniPlayer> {
     final c = ref.watch(playerControllerProvider);
     final remote = remoteControlsOf?.call(ref);
     final playback = ref.read(playbackProvider.notifier);
+    final hasPrevious = ref.watch(playbackProvider.select((s) => s?.hasPrevious ?? false));
 
-    Widget button(IconData icon, VoidCallback onPressed, {double size = 24, String? tooltip}) => IconButton(
-      onPressed: () {
-        onPressed();
-        _show();
-      },
+    // A null onPressed disables the button (dimmed), like Previous without a video to go back to.
+    Widget button(IconData icon, VoidCallback? onPressed, {double size = 24, String? tooltip}) => IconButton(
+      onPressed: onPressed == null
+          ? null
+          : () {
+              onPressed();
+              _show();
+            },
       tooltip: tooltip,
       visualDensity: VisualDensity.compact,
       color: Colors.white,
+      disabledColor: Colors.white38,
       icon: Icon(icon, size: size, fill: 1),
     );
 
@@ -662,7 +678,11 @@ class _MiniPlayerState extends ConsumerState<_MiniPlayer> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              button(Symbols.skip_previous, () => playback.previous(), tooltip: 'Previous'),
+                              button(
+                                Symbols.skip_previous,
+                                hasPrevious ? () => playback.previous() : null,
+                                tooltip: 'Previous',
+                              ),
                               const SizedBox(width: 4),
                               center,
                               const SizedBox(width: 4),

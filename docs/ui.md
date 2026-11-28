@@ -131,7 +131,7 @@ Both themes follow the device setting by default (Settings → Appearance). Read
 - **Player controls (`player_view.dart`):**
   - Tap to show; they auto-hide after 3 s.
   - Minimise chevron, CC, Cast, settings; in fullscreen also the title and a lock button (not on a TV).
-  - Previous / play / next.
+  - Previous / play / next. Previous is dimmed and disabled with no video to go back to (playback.md), here and in the mini player.
   - Time, fullscreen, and the seek bar: red, buffered range, chapter gaps, SponsorBlock colours, and a storyboard preview with time and chapter while dragging.
   - Double-tap ±10 s with a ripple; hold for 2× speed.
   - **Settings sheet:** Quality, Playback speed, Captions, Loop, Sleep timer. It scrolls, since the landscape sheet is shorter than its items.

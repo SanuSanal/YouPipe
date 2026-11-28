@@ -1,0 +1,11 @@
+<!-- Picture-in-picture Previous without a video to go back to (MainActivity.kt): 38% white like the app's own
+     disabled buttons, since some system UIs (vivo's OriginOS) don't dim disabled actions themselves. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#61FFFFFF"
+        android:pathData="M6,6h2v12H6zM9.5,12l8.5,6V6z" />
+</vector>

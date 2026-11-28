@@ -446,7 +446,14 @@ class _PlayerViewState extends ConsumerState<PlayerView> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _IconBtn(Symbols.skip_previous, size: 36, filled: true, onTap: playback.previous),
+                  _IconBtn(
+                    Symbols.skip_previous,
+                    size: 36,
+                    filled: true,
+                    onTap: ref.watch(playbackProvider.select((s) => s?.hasPrevious ?? false))
+                        ? playback.previous
+                        : null,
+                  ),
                   const SizedBox(width: 40),
                   FocusHighlight(
                     radius: 30,
@@ -530,14 +537,16 @@ class _IconBtn extends StatelessWidget {
   const _IconBtn(this.icon, {required this.onTap, this.size = 24, this.filled = false});
 
   final IconData icon;
-  final VoidCallback onTap;
+
+  /// Null disables the button (dimmed), like Previous without a video to go back to.
+  final VoidCallback? onTap;
   final double size;
   final bool filled;
 
   @override
   Widget build(BuildContext context) => IconButton(
     onPressed: onTap,
-    icon: Icon(icon, size: size, color: Colors.white, fill: filled ? 1 : 0),
+    icon: Icon(icon, size: size, color: onTap == null ? Colors.white38 : Colors.white, fill: filled ? 1 : 0),
   );
 }
 

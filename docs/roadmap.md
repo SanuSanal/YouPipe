@@ -46,6 +46,7 @@
 - **The "end of video" sleep timer** let Autoplay start the next video (2026-11-25); it now stops at the end (playback.md).
 - **The sleep timer and captions choices did nothing** (2026-11-25): the player settings sheet used its own ref after closing (playback.md).
 - **The PiP window had no previous, play/pause or next buttons on vivo/iQOO** (2026-11-28). Stock Android (the Moto) builds them from the media session, but OriginOS doesn't. The app now gives its own (playback.md). Checked on the iQOO (I2405, Android 16): the buttons show, and pause, play and next work.
+- **Previous is disabled with no video to go back to** (2026-11-28), in the player, fullscreen, the mini player and the PiP window, like YouTube (playback.md). Checked on the iQOO: dimmed on the first video, enabled after Next, dimmed again after going back.
 
 ## Next
 

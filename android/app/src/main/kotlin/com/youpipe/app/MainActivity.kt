@@ -29,6 +29,9 @@ class MainActivity : AudioServiceActivity() {
     /** Whether the video plays, for the PiP window's play/pause button. */
     private var pipPlaying = false
 
+    /** Whether there's a video to go back to; without one the PiP window's Previous is disabled. */
+    private var pipHasPrevious = false
+
     /** The PiP window's buttons (see [actions]): sent on to Dart, which runs them like the notification's. */
     private val pipActionReceiver =
         object : BroadcastReceiver() {
@@ -70,6 +73,7 @@ class MainActivity : AudioServiceActivity() {
                         "arm" -> {
                             pipArmed = (call.argument<Boolean>("enabled") ?: false) && SystemChannel.supportsPip(this@MainActivity)
                             pipPlaying = call.argument<Boolean>("playing") ?: false
+                            pipHasPrevious = call.argument<Boolean>("hasPrevious") ?: false
                             val w = call.argument<Int>("width") ?: 16
                             val h = call.argument<Int>("height") ?: 9
                             // Android rejects ratios outside 1:2.39..2.39:1.
@@ -111,7 +115,13 @@ class MainActivity : AudioServiceActivity() {
             return RemoteAction(Icon.createWithResource(this, icon), title, title, pending)
         }
         return listOf(
-            action("previous", R.drawable.ic_pip_previous, "Previous", 1),
+            // Disabled without a video to go back to, like the app's own Previous buttons. The icon is dimmed too:
+            // OriginOS ignores taps on a disabled action but draws it like an enabled one.
+            if (pipHasPrevious) {
+                action("previous", R.drawable.ic_pip_previous, "Previous", 1)
+            } else {
+                action("previous", R.drawable.ic_pip_previous_disabled, "Previous", 1).apply { isEnabled = false }
+            },
             if (pipPlaying) {
                 action("toggle", R.drawable.ic_pip_pause, "Pause", 2)
             } else {
